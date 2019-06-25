@@ -459,7 +459,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     /// Is important to enable only when communicating with the device via wifi
     /// and remember to disable it when disconnecting from device.
     private void forceWifiUsage(MethodCall poCall, Result poResult) {
-        boolean canWriteFlag = false;
+        boolean canWriteFlag = true;
 
         boolean useWifi = poCall.argument("useWifi");
 
@@ -467,7 +467,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    canWriteFlag = Settings.System.canWrite(moContext);
+                    //canWriteFlag = Settings.System.canWrite(moContext);
 
                     if (!canWriteFlag) {
                         Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
