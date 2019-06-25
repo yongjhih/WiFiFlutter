@@ -482,13 +482,14 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 if (((Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) && canWriteFlag) || ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) && !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M))) {
                     final ConnectivityManager manager = (ConnectivityManager) moContext
                             .getSystemService(Context.CONNECTIVITY_SERVICE);
-                    NetworkRequest.Builder builder;
-                    builder = new NetworkRequest.Builder();
+                    final NetworkRequest.Builder builder = new NetworkRequest.Builder()
                     /// set the transport type do WIFI
-                    builder.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
+                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                    .removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                    .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
 
                     if (manager != null) {
-                        manager.requestNetwork(builder.build(), new ConnectivityManager.NetworkCallback() {
+                        manager.registerNetworkCallback(builder.build(), new ConnectivityManager.NetworkCallback() {
                             @Override
                             public void onAvailable(Network network) {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -566,10 +567,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
                 String security = null;
                 List<ScanResult> results = moWiFi.getScanResults();
+                ScanResult selectedResult = null;
                 for (ScanResult result : results) {
                     String resultString = "" + result.SSID;
                     if (ssid.equals(resultString)) {
                         security = getSecurityType(result);
+                        selectedResult = result;
                     }
                 }
 
@@ -613,6 +616,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     /// Disconnect current Wifi.
     private void disconnect(Result poResult) {
         moWiFi.disconnect();
+
+        List<WifiConfiguration> mWifiConfigList = moWiFi.getConfiguredNetworks();
+        for (WifiConfiguration wifiConfig : mWifiConfigList) {
+            moWiFi.enableNetwork(wifiConfig.networkId, true);
+            moWiFi.reconnect();
+        }
         poResult.success(null);
     }
 
@@ -725,6 +734,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         /// Make new configuration
         WifiConfiguration conf = new WifiConfiguration();
         conf.SSID = "\"" + ssid + "\"";
+        conf.priority = 100;
 
         if (security != null) security = security.toUpperCase();
         else security = "NONE";
@@ -761,7 +771,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
 
         /// Remove the existing configuration for this netwrok
-        List<WifiConfiguration> mWifiConfigList = moWiFi.getConfiguredNetworks();
+        final List<WifiConfiguration> mWifiConfigList = moWiFi.getConfiguredNetworks();
 
         int updateNetwork = -1;
 
@@ -773,41 +783,66 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 }
             }
         }
+        Log.i("ASDF", "updateNetwork: " + updateNetwork);
 
         /// If network not already in configured networks add new network
         if (updateNetwork == -1) {
             updateNetwork = moWiFi.addNetwork(conf);
             moWiFi.saveConfiguration();
         }
+        Log.i("ASDF", "updateNetwork: " + updateNetwork);
 
+        /*
         if (updateNetwork == -1) {
             return false;
         }
+        */
 
+        /*
         if (joinOnce != null && joinOnce.booleanValue()) {
             ssidsToBeRemovedOnExit.add(conf.SSID);
         }
+        */
 
         boolean disconnect = moWiFi.disconnect();
+        /*
         if (!disconnect) {
             return false;
         }
+        */
+
+        boolean enabled = false;
+        for (WifiConfiguration wifiConfig : mWifiConfigList) {
+            if (!wifiConfig.SSID.equals(conf.SSID)) {
+                final boolean disabled = moWiFi.disableNetwork(wifiConfig.networkId);
+                Log.i("ASDF", "disabled: " + disabled + ": " + wifiConfig.SSID);
+            } else {
+                updateNetwork = wifiConfig.networkId;
+                enabled = moWiFi.enableNetwork(wifiConfig.networkId, true);
+                Log.i("ASDF", "enabled: " + enabled);
+            }
+        }
+        moWiFi.reconnect();
+
 
         Log.i("ASDF", Thread.currentThread().getName());
 
-        boolean enabled = moWiFi.enableNetwork(updateNetwork, true);
+        //boolean enabled = moWiFi.enableNetwork(updateNetwork, true);
+        //moWiFi.reconnect();
+        //Log.i("ASDF", "enabled: " + enabled);
+        //enabled = moWiFi.enableNetwork(updateNetwork, true);
         if (!enabled) return false;
 
         boolean connected = false;
         for (int i = 0; i < 30; i++) {
-            int networkId = moWiFi.getConnectionInfo().getNetworkId();
-            if (networkId != -1) {
-                connected = networkId == updateNetwork;
-                break;
-            }
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException ignored) {
+                break;
+            }
+            int networkId = moWiFi.getConnectionInfo().getNetworkId();
+            if (networkId != -1) {
+                connected = networkId == updateNetwork;
                 break;
             }
         }
