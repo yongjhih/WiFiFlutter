@@ -80,20 +80,24 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         registrar.addViewDestroyListener(new ViewDestroyListener() {
             @Override
             public boolean onViewDestroy(FlutterNativeView view) {
-                if (!wifiIotPlugin.ssidsToBeRemovedOnExit.isEmpty()) {
-                    List<WifiConfiguration> wifiConfigList =
-                            wifiIotPlugin.moWiFi.getConfiguredNetworks();
-                    for (String ssid : wifiIotPlugin.ssidsToBeRemovedOnExit) {
-                        for (WifiConfiguration wifiConfig : wifiConfigList) {
-                            if (wifiConfig.SSID.equals(ssid)) {
-                                wifiIotPlugin.moWiFi.removeNetwork(wifiConfig.networkId);
-                            }
-                        }
-                    }
-                }
+                removeOnceNetworks(wifiIotPlugin);
                 return false;
             }
         });
+    }
+
+    public static void removeOnceNetworks(WifiIotPlugin wifiIotPlugin) {
+        if (!wifiIotPlugin.ssidsToBeRemovedOnExit.isEmpty()) {
+            List<WifiConfiguration> wifiConfigList =
+                    wifiIotPlugin.moWiFi.getConfiguredNetworks();
+            for (String ssid : wifiIotPlugin.ssidsToBeRemovedOnExit) {
+                for (WifiConfiguration wifiConfig : wifiConfigList) {
+                    if (wifiConfig.SSID.equals(ssid)) {
+                        wifiIotPlugin.moWiFi.removeNetwork(wifiConfig.networkId);
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -120,6 +124,11 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             case "isConnected":
                 isConnected(poResult);
                 break;
+                /*
+            case "reconnect":
+                reconnect(poResult);
+                break;
+                */
             case "disconnect":
                 disconnect(poResult);
                 break;
@@ -616,12 +625,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     /// Disconnect current Wifi.
     private void disconnect(Result poResult) {
         moWiFi.disconnect();
-
+        removeOnceNetworks(this);
         List<WifiConfiguration> mWifiConfigList = moWiFi.getConfiguredNetworks();
         for (WifiConfiguration wifiConfig : mWifiConfigList) {
             moWiFi.enableNetwork(wifiConfig.networkId, true);
-            moWiFi.reconnect();
         }
+        moWiFi.reconnect();
         poResult.success(null);
     }
 
@@ -798,11 +807,9 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
         */
 
-        /*
         if (joinOnce != null && joinOnce.booleanValue()) {
             ssidsToBeRemovedOnExit.add(conf.SSID);
         }
-        */
 
         boolean disconnect = moWiFi.disconnect();
         /*
@@ -812,10 +819,10 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         */
 
         boolean enabled = false;
+        Log.i("ASDF", "disable all of known wifi except which it's connecting to");
         for (WifiConfiguration wifiConfig : mWifiConfigList) {
             if (!wifiConfig.SSID.equals(conf.SSID)) {
                 final boolean disabled = moWiFi.disableNetwork(wifiConfig.networkId);
-                Log.i("ASDF", "disabled: " + disabled + ": " + wifiConfig.SSID);
             } else {
                 updateNetwork = wifiConfig.networkId;
                 enabled = moWiFi.enableNetwork(wifiConfig.networkId, true);
