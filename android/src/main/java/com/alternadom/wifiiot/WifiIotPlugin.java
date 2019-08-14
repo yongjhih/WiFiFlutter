@@ -487,14 +487,13 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                     }
                 }
 
-
                 final ConnectivityManager manager = (ConnectivityManager) moContext
                         .getSystemService(Context.CONNECTIVITY_SERVICE);
                 final NetworkRequest.Builder builder = new NetworkRequest.Builder()
                 /// set the transport type WIFI
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                //.removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                //.removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
 
                 if (manager != null) {
                     manager.registerNetworkCallback(builder.build(), new ConnectivityManager.NetworkCallback() {
@@ -557,6 +556,29 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }.start();
     }
 
+    public static final String CAPTIVE_PORTAL_DETECTION_ENABLED = "captive_portal_detection_enabled";
+    public static final int CAPTIVE_PORTAL_MODE_IGNORE = 0;
+
+    /**
+     * When detecting a captive portal, display a notification that
+     * prompts the user to sign in.
+     */
+    public static final int CAPTIVE_PORTAL_MODE_PROMPT = 1;
+
+    /**
+     * When detecting a captive portal, immediately disconnect from the
+     * network and do not reconnect to that network in the future.
+     */
+    public static final int CAPTIVE_PORTAL_MODE_AVOID = 2;
+
+    /**
+     * What to do when connecting a network that presents a captive portal.
+     * Must be one of the CAPTIVE_PORTAL_MODE_* constants above.
+     *
+     * The default for this setting is CAPTIVE_PORTAL_MODE_PROMPT.
+     */
+    public static final String CAPTIVE_PORTAL_MODE = "captive_portal_mode";
+
     /// Send the ssid and password of a Wifi network into this to connect to the network.
     /// Example:  wifi.findAndConnect(ssid, password);
     /// After 10 seconds, a post telling you whether you are connected will pop up.
@@ -566,12 +588,42 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && moContext.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             moActivity.requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION);
         }
+        final String ssid = poCall.argument("ssid");
+        final String password = poCall.argument("password");
+        final Boolean joinOnce = poCall.argument("join_once");
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            Settings.Global.putInt(moContext.getContentResolver(), CAPTIVE_PORTAL_MODE, CAPTIVE_PORTAL_MODE_PROMPT);
+            Settings.Global.putInt(moContext.getContentResolver(), CAPTIVE_PORTAL_DETECTION_ENABLED, 0);
+        }
+
+        /*
+        final ConnectivityManager manager = (ConnectivityManager) moContext
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            final NetworkRequest.Builder builder = new NetworkRequest.Builder()
+                    /// set the transport type WIFI
+                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
+
+            if (manager != null) {
+                manager.registerNetworkCallback(builder.build(), new ConnectivityManager.NetworkCallback() {
+                    @Override
+                    public void onAvailable(Network network) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            manager.bindProcessToNetwork(network);
+                            manager.unregisterNetworkCallback(this);
+                        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            ConnectivityManager.setProcessDefaultNetwork(network);
+                            manager.unregisterNetworkCallback(this);
+                        }
+                    }
+                });
+            }
+        }
+        */
+
         new Thread() {
             public void run() {
-                String ssid = poCall.argument("ssid");
-                String password = poCall.argument("password");
-                Boolean joinOnce = poCall.argument("join_once");
-
                 String security = null;
                 List<ScanResult> results = moWiFi.getScanResults();
                 ScanResult selectedResult = null;
