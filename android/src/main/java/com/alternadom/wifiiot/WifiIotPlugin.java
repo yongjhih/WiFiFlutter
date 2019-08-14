@@ -488,34 +488,32 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 }
 
 
-                if (((Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) && canWriteFlag) || ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) && !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M))) {
-                    final ConnectivityManager manager = (ConnectivityManager) moContext
-                            .getSystemService(Context.CONNECTIVITY_SERVICE);
-                    final NetworkRequest.Builder builder = new NetworkRequest.Builder()
-                    /// set the transport type do WIFI
-                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                    .removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                    .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                final ConnectivityManager manager = (ConnectivityManager) moContext
+                        .getSystemService(Context.CONNECTIVITY_SERVICE);
+                final NetworkRequest.Builder builder = new NetworkRequest.Builder()
+                /// set the transport type WIFI
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
 
-                    if (manager != null) {
-                        manager.registerNetworkCallback(builder.build(), new ConnectivityManager.NetworkCallback() {
-                            @Override
-                            public void onAvailable(Network network) {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                    manager.bindProcessToNetwork(network);
-                                    manager.unregisterNetworkCallback(this);
-                                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                    ConnectivityManager.setProcessDefaultNetwork(network);
-                                    manager.unregisterNetworkCallback(this);
-                                }
+                if (manager != null) {
+                    manager.registerNetworkCallback(builder.build(), new ConnectivityManager.NetworkCallback() {
+                        @Override
+                        public void onAvailable(Network network) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                manager.bindProcessToNetwork(network);
+                                manager.unregisterNetworkCallback(this);
+                            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                ConnectivityManager.setProcessDefaultNetwork(network);
+                                manager.unregisterNetworkCallback(this);
                             }
-                        });
-                    }
+                        }
+                    });
                 }
             }
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                ConnectivityManager manager = (ConnectivityManager) moContext
+                final ConnectivityManager manager = (ConnectivityManager) moContext
                         .getSystemService(Context.CONNECTIVITY_SERVICE);
                 assert manager != null;
                 manager.bindProcessToNetwork(null);
