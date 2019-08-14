@@ -1,6 +1,7 @@
 package com.alternadom.wifiiot;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -32,6 +33,8 @@ import java.io.Closeable;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.DatagramSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -583,6 +586,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     /// Example:  wifi.findAndConnect(ssid, password);
     /// After 10 seconds, a post telling you whether you are connected will pop up.
     /// Callback returns true if ssid is in the range
+    @SuppressLint("PrivateApi")
     private void findAndConnect(final MethodCall poCall, final Result poResult) {
         int PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION = 65655434;
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && moContext.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
@@ -593,10 +597,11 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         final Boolean joinOnce = poCall.argument("join_once");
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            Settings.Global.putInt(moContext.getContentResolver(), CAPTIVE_PORTAL_MODE, CAPTIVE_PORTAL_MODE_PROMPT);
-            Settings.Global.putInt(moContext.getContentResolver(), CAPTIVE_PORTAL_DETECTION_ENABLED, 0);
+            // Requires system WRITE_SECURE_SETTINGS, DO NOT USE in user app
+            //Settings.Global.putInt(moContext.getContentResolver(), CAPTIVE_PORTAL_MODE, CAPTIVE_PORTAL_MODE_PROMPT);
+            //Settings.Global.putInt(moContext.getContentResolver(), CAPTIVE_PORTAL_DETECTION_ENABLED, 0);
+            // ref. https://gist.github.com/yongjhih/6d1cee717a000113abb68dd107d7786e
         }
-
         /*
         final ConnectivityManager manager = (ConnectivityManager) moContext
                 .getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -674,11 +679,13 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
     /// Disconnect current Wifi.
     private void disconnect(Result poResult) {
+        Log.i("ASDF", "disconnect");
         moWiFi.disconnect();
         removeOnceNetworks(this);
         List<WifiConfiguration> mWifiConfigList = moWiFi.getConfiguredNetworks();
+        Log.i("ASDF", "enableNetwork for all");
         for (WifiConfiguration wifiConfig : mWifiConfigList) {
-            moWiFi.enableNetwork(wifiConfig.networkId, true);
+            moWiFi.enableNetwork(wifiConfig.networkId, false);
         }
         moWiFi.reconnect();
         poResult.success(null);
@@ -735,6 +742,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
     /// This method will remove the WiFi network as per the passed SSID from the device list
     private void removeWifiNetwork(MethodCall poCall, Result poResult) {
+        Log.i("ASDF", "removeWifiNetwork");
         String prefix_ssid = poCall.argument("ssid");
         if (prefix_ssid.equals("")) {
             poResult.error("Error", "No prefix SSID was given!", null);
@@ -787,6 +795,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         sb.append(strip[3]);
         return sb.toString();
     }
+
+
 
     /// Method to connect to WIFI Network
     private Boolean connectTo(String ssid, String password, String security, Boolean joinOnce) {
@@ -875,11 +885,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 final boolean disabled = moWiFi.disableNetwork(wifiConfig.networkId);
             } else {
                 updateNetwork = wifiConfig.networkId;
-                enabled = moWiFi.enableNetwork(wifiConfig.networkId, true);
-                Log.i("ASDF", "enabled: " + enabled);
+                //enabled = moWiFi.enableNetwork(wifiConfig.networkId, true);
             }
         }
-        moWiFi.reconnect();
+        enabled = moWiFi.enableNetwork(updateNetwork, true);
+        Log.i("ASDF", "enabled: " + enabled);
+        //moWiFi.reconnect();
 
 
         Log.i("ASDF", Thread.currentThread().getName());
