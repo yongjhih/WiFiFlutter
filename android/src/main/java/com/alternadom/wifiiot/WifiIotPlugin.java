@@ -108,6 +108,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                     wifiIotPlugin.moWiFi.getConfiguredNetworks();
             for (String ssid : wifiIotPlugin.ssidsToBeRemovedOnExit) {
                 for (WifiConfiguration wifiConfig : wifiConfigList) {
+                    if (wifiConfig == null) continue;
+                    if (wifiConfig.SSID == null) continue;
                     if (wifiConfig.SSID.equals(ssid)) {
                         wifiIotPlugin.moWiFi.removeNetwork(wifiConfig.networkId);
                     }
@@ -859,6 +861,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
         if (mWifiConfigList != null) {
             for (WifiConfiguration wifiConfig : mWifiConfigList) {
+                if (wifiConfig == null) continue;
+                if (wifiConfig.SSID == null) continue;
                 if (wifiConfig.SSID.equals(conf.SSID)) {
                     conf.networkId = wifiConfig.networkId;
                     updateNetwork = moWiFi.updateNetwork(conf);
@@ -874,28 +878,19 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
         Log.i("ASDF", "updateNetwork: " + updateNetwork);
 
-        /*
-        if (updateNetwork == -1) {
-            return false;
-        }
-        */
-
         if (joinOnce != null && joinOnce.booleanValue()) {
             ssidsToBeRemovedOnExit.add(conf.SSID);
         }
 
         boolean disconnect = moWiFi.disconnect();
-        /*
-        if (!disconnect) {
-            return false;
-        }
-        */
 
         boolean enabled = false;
         Log.i("ASDF", "disable all of known wifi except which it's connecting to");
         for (WifiConfiguration wifiConfig : mWifiConfigList) {
+            if (wifiConfig == null) continue;
+            if (wifiConfig.SSID == null) continue;
             if (!wifiConfig.SSID.equals(conf.SSID)) {
-                final boolean disabled = moWiFi.disableNetwork(wifiConfig.networkId);
+                moWiFi.disableNetwork(wifiConfig.networkId);
             } else {
                 updateNetwork = wifiConfig.networkId;
                 //enabled = moWiFi.enableNetwork(wifiConfig.networkId, true);
