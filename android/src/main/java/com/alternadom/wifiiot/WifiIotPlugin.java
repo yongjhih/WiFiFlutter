@@ -61,11 +61,24 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     private WifiApManager moWiFiAPManager;
     private Activity moActivity;
     private BroadcastReceiver receiver;
-    private List<String> ssidsToBeRemovedOnExit = new ArrayList<String>();
+    private List<String> ssidsToBeRemovedOnExit = new ArrayList<>();
+    private final Registrar registrar;
 
     private WifiIotPlugin(Activity poActivity) {
         this.moActivity = poActivity;
         this.moContext = poActivity.getApplicationContext();
+        this.moWiFi = (WifiManager) moContext.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        this.moWiFiAPManager = new WifiApManager(moContext.getApplicationContext());
+    }
+
+    private WifiIotPlugin(Registrar registrar) {
+        this.registrar = registrar;
+        this.moActivity = registrar.activity();
+        if (moActivity != null) {
+            this.moContext = moActivity.getApplicationContext();
+        } else {
+            this.moContext = registrar.context().getApplicationContext();
+        }
         this.moWiFi = (WifiManager) moContext.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         this.moWiFiAPManager = new WifiApManager(moContext.getApplicationContext());
     }
@@ -76,7 +89,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     public static void registerWith(Registrar registrar) {
         final MethodChannel channel = new MethodChannel(registrar.messenger(), "wifi_iot");
         final EventChannel eventChannel = new EventChannel(registrar.messenger(), "plugins.wififlutter.io/wifi_scan");
-        final WifiIotPlugin wifiIotPlugin = new WifiIotPlugin(registrar.activity());
+        final WifiIotPlugin wifiIotPlugin = new WifiIotPlugin(registrar);
         eventChannel.setStreamHandler(wifiIotPlugin);
         channel.setMethodCallHandler(wifiIotPlugin);
 
