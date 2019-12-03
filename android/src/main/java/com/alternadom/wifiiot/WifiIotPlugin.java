@@ -64,13 +64,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     private List<String> ssidsToBeRemovedOnExit = new ArrayList<>();
     private final Registrar registrar;
 
-    private WifiIotPlugin(Activity poActivity) {
-        this.moActivity = poActivity;
-        this.moContext = poActivity.getApplicationContext();
-        this.moWiFi = (WifiManager) moContext.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        this.moWiFiAPManager = new WifiApManager(moContext.getApplicationContext());
-    }
-
     private WifiIotPlugin(Registrar registrar) {
         this.registrar = registrar;
         this.moActivity = registrar.activity();
