@@ -878,13 +878,10 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         boolean disconnect = moWiFi.disconnect();
 
         boolean enabled = false;
-        Log.i("ASDF", "disable all of known wifi except which it's connecting to");
         for (WifiConfiguration wifiConfig : mWifiConfigList) {
             if (wifiConfig == null) continue;
             if (wifiConfig.SSID == null) continue;
-            if (!wifiConfig.SSID.equals(conf.SSID)) {
-                moWiFi.disableNetwork(wifiConfig.networkId);
-            } else {
+            if (wifiConfig.SSID.equals(conf.SSID)) {
                 updateNetwork = wifiConfig.networkId;
                 //enabled = moWiFi.enableNetwork(wifiConfig.networkId, true);
             }
