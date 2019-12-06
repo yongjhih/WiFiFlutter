@@ -637,27 +637,53 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
         new Thread() {
             public void run() {
-                String security = null;
-                List<ScanResult> results = moWiFi.getScanResults();
-                ScanResult selectedResult = null;
-                for (ScanResult result : results) {
-                    String resultString = "" + result.SSID;
-                    if (ssid.equals(resultString)) {
-                        security = getSecurityType(result);
-                        selectedResult = result;
+                ScanResult selectedResult = getScanResult(ssid);
+                if (selectedResult == null) {
+                    for (int i = 0; i < 30; i++) {
+                        try {
+                            Thread.sleep(4000);
+                        } catch (InterruptedException ignored) {
+                            break;
+                        }
+                        selectedResult = getScanResult(ssid);
+                        if (selectedResult != null) break;
                     }
                 }
-
-                final boolean connected = connectTo(ssid, password, security, joinOnce);
                 final Handler handler = new Handler(Looper.getMainLooper());
-                handler.post(new Runnable() {
-                    @Override
-                    public void run () {
-                        poResult.success(connected);
-                    }
-                });
+                if (selectedResult != null) {
+                    final boolean connected = connectTo(ssid, password, getSecurityType(selectedResult), joinOnce);
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run () {
+                            poResult.success(connected);
+                        }
+                    });
+                } else {
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run () {
+                            //poResult.success(false);
+                            poResult.error("Error", ssid + "not found", null);
+                        }
+                    });
+                }
             }
         }.start();
+    }
+
+    private ScanResult getScanResult(String ssid) {
+        List<ScanResult> results = moWiFi.getScanResults();
+        ScanResult selectedResult = null;
+
+        for (ScanResult result : results) {
+            String resultString = "" + result.SSID;
+            if (ssid.equals(resultString)) {
+                selectedResult = result;
+                break;
+            }
+        }
+
+        return selectedResult;
     }
 
     private static String getSecurityType(ScanResult scanResult) {
@@ -875,17 +901,16 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             ssidsToBeRemovedOnExit.add(conf.SSID);
         }
 
-        boolean disconnect = moWiFi.disconnect();
-
         boolean enabled = false;
         for (WifiConfiguration wifiConfig : mWifiConfigList) {
             if (wifiConfig == null) continue;
             if (wifiConfig.SSID == null) continue;
             if (wifiConfig.SSID.equals(conf.SSID)) {
                 updateNetwork = wifiConfig.networkId;
-                //enabled = moWiFi.enableNetwork(wifiConfig.networkId, true);
             }
         }
+
+        boolean disconnect = moWiFi.disconnect();
         enabled = moWiFi.enableNetwork(updateNetwork, true);
         Log.i("ASDF", "enabled: " + enabled);
         //moWiFi.reconnect();
