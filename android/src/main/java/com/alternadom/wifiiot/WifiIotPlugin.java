@@ -99,12 +99,14 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         if (!wifiIotPlugin.ssidsToBeRemovedOnExit.isEmpty()) {
             List<WifiConfiguration> wifiConfigList =
                     wifiIotPlugin.moWiFi.getConfiguredNetworks();
-            for (String ssid : wifiIotPlugin.ssidsToBeRemovedOnExit) {
-                for (WifiConfiguration wifiConfig : wifiConfigList) {
-                    if (wifiConfig == null) continue;
-                    if (wifiConfig.SSID == null) continue;
-                    if (wifiConfig.SSID.equals(ssid)) {
-                        wifiIotPlugin.moWiFi.removeNetwork(wifiConfig.networkId);
+            if (wifiConfigList != null && !wifiConfigList.isEmpty()) {
+                for (String ssid : wifiIotPlugin.ssidsToBeRemovedOnExit) {
+                    for (WifiConfiguration wifiConfig : wifiConfigList) {
+                        if (wifiConfig == null) continue;
+                        if (wifiConfig.SSID == null) continue;
+                        if (wifiConfig.SSID.equals(ssid)) {
+                            wifiIotPlugin.moWiFi.removeNetwork(wifiConfig.networkId);
+                        }
                     }
                 }
             }
@@ -718,8 +720,10 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         removeOnceNetworks(this);
         List<WifiConfiguration> mWifiConfigList = moWiFi.getConfiguredNetworks();
         Log.i("ASDF", "enableNetwork for all");
-        for (WifiConfiguration wifiConfig : mWifiConfigList) {
-            moWiFi.enableNetwork(wifiConfig.networkId, false);
+        if (mWifiConfigList != null && !mWifiConfigList.isEmpty()) {
+            for (WifiConfiguration wifiConfig : mWifiConfigList) {
+                moWiFi.enableNetwork(wifiConfig.networkId, false);
+            }
         }
         moWiFi.reconnect();
         poResult.success(null);
@@ -783,13 +787,15 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
 
         List<WifiConfiguration> mWifiConfigList = moWiFi.getConfiguredNetworks();
-        for (WifiConfiguration wifiConfig : mWifiConfigList) {
-            String comparableSSID = ('"' + prefix_ssid); //Add quotes because wifiConfig.SSID has them
-            if (wifiConfig.SSID.startsWith(comparableSSID)) {
-                moWiFi.removeNetwork(wifiConfig.networkId);
-                moWiFi.saveConfiguration();
-                poResult.success(true);
-                return;
+        if (mWifiConfigList != null && !mWifiConfigList.isEmpty()) {
+            for (WifiConfiguration wifiConfig : mWifiConfigList) {
+                String comparableSSID = ('"' + prefix_ssid); //Add quotes because wifiConfig.SSID has them
+                if (wifiConfig.SSID.startsWith(comparableSSID)) {
+                    moWiFi.removeNetwork(wifiConfig.networkId);
+                    moWiFi.saveConfiguration();
+                    poResult.success(true);
+                    return;
+                }
             }
         }
         poResult.success(false);
@@ -802,7 +808,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
         List<WifiConfiguration> mWifiConfigList = moWiFi.getConfiguredNetworks();
         String comparableSSID = ('"' + ssid + '"'); //Add quotes because wifiConfig.SSID has them
-        if (mWifiConfigList != null) {
+        if (mWifiConfigList != null && !mWifiConfigList.isEmpty()) {
             for (WifiConfiguration wifiConfig : mWifiConfigList) {
                 if (wifiConfig.SSID.equals(comparableSSID)) {
                     poResult.success(true);
@@ -878,7 +884,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
         int updateNetwork = -1;
 
-        if (mWifiConfigList != null) {
+        if (mWifiConfigList != null && !mWifiConfigList.isEmpty()) {
             for (WifiConfiguration wifiConfig : mWifiConfigList) {
                 if (wifiConfig == null) continue;
                 if (wifiConfig.SSID == null) continue;
@@ -902,13 +908,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
 
         boolean enabled = false;
-        for (WifiConfiguration wifiConfig : mWifiConfigList) {
-            if (wifiConfig == null) continue;
-            if (wifiConfig.SSID == null) continue;
-            if (wifiConfig.SSID.equals(conf.SSID)) {
-                updateNetwork = wifiConfig.networkId;
-            }
-        }
 
         boolean disconnect = moWiFi.disconnect();
         enabled = moWiFi.enableNetwork(updateNetwork, true);
