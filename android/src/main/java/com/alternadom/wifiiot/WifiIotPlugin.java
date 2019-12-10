@@ -504,8 +504,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                         .getSystemService(Context.CONNECTIVITY_SERVICE);
                 final NetworkRequest.Builder builder = new NetworkRequest.Builder()
                 /// set the transport type WIFI
-                //.removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                //.removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
 
                 if (manager != null) {
@@ -921,7 +921,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         //moWiFi.reconnect();
         //Log.i("ASDF", "enabled: " + enabled);
         //enabled = moWiFi.enableNetwork(updateNetwork, true);
-        if (!enabled) return false;
+        //if (!enabled) return false;
 
         boolean connected = false;
         for (int i = 0; i < 30; i++) {
