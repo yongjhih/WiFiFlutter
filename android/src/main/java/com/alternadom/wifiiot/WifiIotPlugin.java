@@ -653,6 +653,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 }
                 final Handler handler = new Handler(Looper.getMainLooper());
                 if (selectedResult != null) {
+                    Log.i("ASDF", "found: " + selectedResult.SSID);
                     final boolean connected = connectTo(ssid, password, getSecurityType(selectedResult), joinOnce);
                     handler.post(new Runnable() {
                         @Override
@@ -879,16 +880,18 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             conf.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
         }
 
-        /// Remove the existing configuration for this netwrok
         final List<WifiConfiguration> mWifiConfigList = moWiFi.getConfiguredNetworks();
 
         int updateNetwork = -1;
 
+        Log.i("ASDF", "SSID: " + conf.SSID);
+        Log.i("ASDF", "security: " + security);
         if (mWifiConfigList != null && !mWifiConfigList.isEmpty()) {
             for (WifiConfiguration wifiConfig : mWifiConfigList) {
                 if (wifiConfig == null) continue;
                 if (wifiConfig.SSID == null) continue;
                 if (wifiConfig.SSID.equals(conf.SSID)) {
+                    Log.i("ASDF", "found networkConfig: " + wifiConfig.SSID);
                     conf.networkId = wifiConfig.networkId;
                     updateNetwork = moWiFi.updateNetwork(conf);
                 }
@@ -898,10 +901,11 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
         /// If network not already in configured networks add new network
         if (updateNetwork == -1) {
+            Log.i("ASDF", "addNetwork: " + conf.SSID);
             updateNetwork = moWiFi.addNetwork(conf);
             moWiFi.saveConfiguration();
         }
-        Log.i("ASDF", "updateNetwork: " + updateNetwork);
+        Log.i("ASDF", "addedNetwork: " + updateNetwork);
 
         if (joinOnce != null && joinOnce.booleanValue()) {
             ssidsToBeRemovedOnExit.add(conf.SSID);
@@ -937,6 +941,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             }
         }
 
+        Log.i("ASDF", "connected: " + connected);
         return connected;
     }
 
