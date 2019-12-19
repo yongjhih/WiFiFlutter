@@ -959,9 +959,9 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 connectedSsid = ssidQuoted.substring(1, ssidQuoted.length() - 1);
             }
             Log.i("ASDF", "connectedSsid: " + connectedSsid);
-            Log.i("ASDF", "6808a63: to ssid: " + ssid);
+            Log.i("ASDF", "4fb24a2: to ssid: " + ssid);
             if (connectedSsid != null) {
-                connected = ssid == connectedSsid;
+                connected = ssid.equals(connectedSsid);
                 break;
             }
         }
