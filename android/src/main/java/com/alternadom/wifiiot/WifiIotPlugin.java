@@ -909,6 +909,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                     if (updateNetwork == -1) {
                         conf = wifiConfig;
                         updateNetwork = conf.networkId;
+                        Log.i("ASDF", "update failed: apply existing network: " + conf.networkId);
                     }
                 }
             }
@@ -957,6 +958,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             if (ssidQuoted.startsWith("\"") && ssidQuoted.endsWith("\"")) {
                 connectedSsid = ssidQuoted.substring(1, ssidQuoted.length() - 1);
             }
+            Log.i("ASDF", "connectedSsid: " + connectedSsid);
+            Log.i("ASDF", "6808a63: to ssid: " + ssid);
             if (connectedSsid != null) {
                 connected = ssid == connectedSsid;
                 break;
