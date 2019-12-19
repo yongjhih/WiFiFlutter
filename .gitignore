@@ -13,3 +13,6 @@ build/
 local.properties
 
 .gradle/
+
+generated/
+*.orig
