@@ -906,6 +906,10 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                     Log.i("ASDF", "found networkConfig: " + wifiConfig.SSID);
                     conf.networkId = wifiConfig.networkId;
                     updateNetwork = moWiFi.updateNetwork(conf);
+                    if (updateNetwork == -1) {
+                        conf = wifiConfig;
+                        updateNetwork = conf.networkId;
+                    }
                 }
             }
         }
@@ -924,11 +928,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
 
         boolean enabled = false;
-
-        boolean disconnect = moWiFi.disconnect();
-        enabled = moWiFi.enableNetwork(updateNetwork, true);
-        Log.i("ASDF", "enabled: " + enabled);
-        //moWiFi.reconnect();
+        if (updateNetwork != -1) {
+            moWiFi.disconnect();
+            enabled = moWiFi.enableNetwork(updateNetwork, true);
+            Log.i("ASDF", "enabled: " + enabled);
+            //moWiFi.reconnect();
+        }
 
 
         Log.i("ASDF", Thread.currentThread().getName());
@@ -946,9 +951,14 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             } catch (InterruptedException ignored) {
                 break;
             }
-            int networkId = moWiFi.getConnectionInfo().getNetworkId();
-            if (networkId != -1) {
-                connected = networkId == updateNetwork;
+            WifiInfo info = moWiFi.getConnectionInfo();
+            String ssidQuoted = info.getSSID();
+            String connectedSsid = null;
+            if (ssidQuoted.startsWith("\"") && ssidQuoted.endsWith("\"")) {
+                connectedSsid = ssidQuoted.substring(1, ssidQuoted.length() - 1);
+            }
+            if (connectedSsid != null) {
+                connected = ssid == connectedSsid;
                 break;
             }
         }
