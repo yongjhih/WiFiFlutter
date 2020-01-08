@@ -568,15 +568,24 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 String security = poCall.argument("security");
                 Boolean joinOnce = poCall.argument("join_once");
 
-                final boolean connected = connectTo(ssid, password, security, joinOnce);
-                
-				final Handler handler = new Handler(Looper.getMainLooper());
-                handler.post(new Runnable() {
-                    @Override
-                    public void run () {
-                        poResult.success(connected);
-                    }
-                });
+                final Handler handler = new Handler(Looper.getMainLooper());
+                try {
+                    final boolean connected = connectTo(ssid, password, security, joinOnce);
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run () {
+                            poResult.success(connected);
+                        }
+                    });
+                } catch (Throwable e) {
+                    Log.e("ASDF", e.getMessage());
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run () {
+                            poResult.error("Exception", e.getMessage(), null);
+                        }
+                    });
+                }
             }
         }.start();
     }
@@ -666,13 +675,23 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 final Handler handler = new Handler(Looper.getMainLooper());
                 if (selectedResult != null) {
                     Log.i("ASDF", "found: " + selectedResult.SSID);
-                    final boolean connected = connectTo(ssid, password, getSecurityType(selectedResult), joinOnce);
-                    handler.post(new Runnable() {
-                        @Override
-                        public void run () {
-                            poResult.success(connected);
-                        }
-                    });
+                    try {
+                        final boolean connected = connectTo(ssid, password, getSecurityType(selectedResult), joinOnce);
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run () {
+                                poResult.success(connected);
+                            }
+                        });
+                    } catch (Throwable e) {
+                        Log.e("ASDF", e.getMessage());
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run () {
+                                poResult.error("Exception", e.getMessage(), null);
+                            }
+                        });
+                    }
                 } else {
                     handler.post(new Runnable() {
                         @Override
