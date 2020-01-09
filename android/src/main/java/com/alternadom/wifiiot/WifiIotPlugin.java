@@ -663,7 +663,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 ScanResult selectedResult = getScanResult(ssid);
                 if (selectedResult == null) {
                     for (int i = 0; i < 30; i++) {
-                        moWiFi.startScan();
                         try {
                             Thread.sleep(4000);
                         } catch (InterruptedException ignored) {
