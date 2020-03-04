@@ -16,3 +16,7 @@ local.properties
 
 generated/
 *.orig
+
+.flutter-plugins-dependencies
+flutter_export_environment.sh
+example/ios/Flutter/Generated.xcconfig

@@ -2,12 +2,15 @@ package com.alternadom.wifiiot;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.net.NetworkSpecifier;
+import android.net.wifi.WifiNetworkSpecifier;
 import android.os.Handler;
 import android.os.Looper;
 import android.net.ConnectivityManager;
@@ -21,8 +24,11 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
+import android.os.PatternMatcher;
 import android.provider.Settings;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -33,8 +39,6 @@ import java.io.Closeable;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.DatagramSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -57,7 +61,7 @@ import io.flutter.view.FlutterNativeView;
  */
 public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHandler {
     private WifiManager moWiFi;
-    private Context moContext;
+    private Context context;
     private WifiApManager moWiFiAPManager;
     private Activity moActivity;
     private BroadcastReceiver receiver;
@@ -68,12 +72,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         this.registrar = registrar;
         this.moActivity = registrar.activity();
         if (moActivity != null) {
-            this.moContext = moActivity.getApplicationContext();
+            this.context = moActivity.getApplicationContext();
         } else {
-            this.moContext = registrar.context().getApplicationContext();
+            this.context = registrar.context().getApplicationContext();
         }
-        this.moWiFi = (WifiManager) moContext.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        this.moWiFiAPManager = new WifiApManager(moContext.getApplicationContext());
+        this.moWiFi = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        this.moWiFiAPManager = new WifiApManager(context.getApplicationContext());
     }
 
     /**
@@ -402,18 +406,18 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     @Override
     public void onListen(Object o, EventChannel.EventSink eventSink) {
         int PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION = 65655434;
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && moContext.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             moActivity.requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION);
         }
         receiver = createReceiver(eventSink);
 
-        moContext.registerReceiver(receiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+        context.registerReceiver(receiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
     }
 
     @Override
     public void onCancel(Object o) {
         if(receiver != null){
-            moContext.unregisterReceiver(receiver);
+            context.unregisterReceiver(receiver);
             receiver = null;
         }
 
@@ -470,7 +474,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         try {
 
             int PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION = 65655434;
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && moContext.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
                 moActivity.requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION);
             }
 
@@ -501,18 +505,18 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    //canWriteFlag = Settings.System.canWrite(moContext);
+                    //canWriteFlag = Settings.System.canWrite(context);
 
                     if (!canWriteFlag) {
                         Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
-                        intent.setData(Uri.parse("package:" + moContext.getPackageName()));
+                        intent.setData(Uri.parse("package:" + context.getPackageName()));
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-                        moContext.startActivity(intent);
+                        context.startActivity(intent);
                     }
                 }
 
-                final ConnectivityManager manager = (ConnectivityManager) moContext
+                final ConnectivityManager manager = (ConnectivityManager) context
                         .getSystemService(Context.CONNECTIVITY_SERVICE);
                 final NetworkRequest.Builder builder = new NetworkRequest.Builder()
                 /// set the transport type WIFI
@@ -537,7 +541,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             }
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                final ConnectivityManager manager = (ConnectivityManager) moContext
+                final ConnectivityManager manager = (ConnectivityManager) context
                         .getSystemService(Context.CONNECTIVITY_SERVICE);
                 assert manager != null;
                 manager.bindProcessToNetwork(null);
@@ -568,6 +572,9 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 String security = poCall.argument("security");
                 Boolean joinOnce = poCall.argument("join_once");
 
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && security == null) {
+                    connectToV29(ssid, password, poResult);
+                } else {
                 final Handler handler = new Handler(Looper.getMainLooper());
                 try {
                     final boolean connected = connectTo(ssid, password, security, joinOnce);
@@ -585,6 +592,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                             poResult.error("Exception", e.getMessage(), null);
                         }
                     });
+                }
                 }
             }
         }.start();
@@ -620,8 +628,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     @SuppressLint("PrivateApi")
     private void findAndConnect(final MethodCall poCall, final Result poResult) {
         int PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION = 65655434;
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && moContext.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
-            moActivity.requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION);
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+            moActivity.requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION);
         }
         final String ssid = poCall.argument("ssid");
         final String password = poCall.argument("password");
@@ -629,12 +637,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
             // Requires system WRITE_SECURE_SETTINGS, DO NOT USE in user app
-            //Settings.Global.putInt(moContext.getContentResolver(), CAPTIVE_PORTAL_MODE, CAPTIVE_PORTAL_MODE_PROMPT);
-            //Settings.Global.putInt(moContext.getContentResolver(), CAPTIVE_PORTAL_DETECTION_ENABLED, 0);
+            //Settings.Global.putInt(context.getContentResolver(), CAPTIVE_PORTAL_MODE, CAPTIVE_PORTAL_MODE_PROMPT);
+            //Settings.Global.putInt(context.getContentResolver(), CAPTIVE_PORTAL_DETECTION_ENABLED, 0);
             // ref. https://gist.github.com/yongjhih/6d1cee717a000113abb68dd107d7786e
         }
         /*
-        final ConnectivityManager manager = (ConnectivityManager) moContext
+        final ConnectivityManager manager = (ConnectivityManager) context
                 .getSystemService(Context.CONNECTIVITY_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             final NetworkRequest.Builder builder = new NetworkRequest.Builder()
@@ -736,7 +744,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
     /// Use this method to check if the device is currently connected to Wifi.
     private void isConnected(Result poResult) {
-        ConnectivityManager connManager = (ConnectivityManager) moContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+        ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo mWifi = connManager != null ? connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI) : null;
         if (mWifi != null && mWifi.isConnected()) {
             poResult.success(true);
@@ -763,15 +771,13 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
     /// This method will return current ssid
     private void getSSID(Result poResult) {
-        WifiInfo info = moWiFi.getConnectionInfo();
+        poResult.success(getSsid());
+    }
 
-        // This value should be wrapped in double quotes, so we need to unwrap it.
-        String ssid = info.getSSID();
-        if (ssid.startsWith("\"") && ssid.endsWith("\"")) {
-            ssid = ssid.substring(1, ssid.length() - 1);
-        }
-
-        poResult.success(ssid);
+    public static String unquote(String s) {
+        return s.startsWith("\"") && s.endsWith("\"")
+                ? s.substring(1, s.length() - 1)
+                : s;
     }
 
     /// This method will return the basic service set identifier (BSSID) of the current access point
@@ -869,6 +875,40 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     }
 
 
+    // https://developer.android.com/guide/topics/connectivity/wifi-bootstrap#java
+    @TargetApi(Build.VERSION_CODES.Q)
+    private void connectToV29(String ssid, String password, Result result) {
+        final NetworkSpecifier specifier =
+                new WifiNetworkSpecifier.Builder()
+                        .setSsidPattern(new PatternMatcher(ssid, PatternMatcher.PATTERN_PREFIX))
+                        .build();
+
+        final NetworkRequest request =
+                new NetworkRequest.Builder()
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                        .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .setNetworkSpecifier(specifier)
+                        .build();
+
+        final ConnectivityManager connectivityManager = (ConnectivityManager)
+                context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                result.success(true);
+                connectivityManager.unregisterNetworkCallback(this);
+            }
+
+            @Override
+            public void onUnavailable() {
+                result.error("onUnavailable", null, null);
+                connectivityManager.unregisterNetworkCallback(this);
+            }
+        };
+
+        connectivityManager.registerNetworkCallback(request, networkCallback);
+    }
 
     /// Method to connect to WIFI Network
     private Boolean connectTo(String ssid, String password, String security, Boolean joinOnce) {
@@ -936,7 +976,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         Log.i("ASDF", "updateNetwork: " + updateNetwork);
 
         /// If network not already in configured networks add new network
-        if (updateNetwork == -1) {
+        if (!isConnected(ssid) || updateNetwork == -1) {
             Log.i("ASDF", "addNetwork: " + conf.SSID);
             updateNetwork = moWiFi.addNetwork(conf);
             moWiFi.saveConfiguration();
@@ -947,14 +987,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             ssidsToBeRemovedOnExit.add(conf.SSID);
         }
 
-        boolean enabled = false;
-        if (updateNetwork != -1) {
+        if (!isConnected(ssid) || updateNetwork != -1) {
             moWiFi.disconnect();
-            enabled = moWiFi.enableNetwork(updateNetwork, true);
+            final boolean enabled = moWiFi.enableNetwork(updateNetwork, true);
             Log.i("ASDF", "enabled: " + enabled);
             //moWiFi.reconnect();
         }
-
 
         Log.i("ASDF", Thread.currentThread().getName());
 
@@ -971,22 +1009,27 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             } catch (InterruptedException ignored) {
                 break;
             }
-            WifiInfo info = moWiFi.getConnectionInfo();
-            String ssidQuoted = info.getSSID();
-            String connectedSsid = null;
-            if (ssidQuoted.startsWith("\"") && ssidQuoted.endsWith("\"")) {
-                connectedSsid = ssidQuoted.substring(1, ssidQuoted.length() - 1);
-            }
+            String connectedSsid = getSsid();
             Log.i("ASDF", "connectedSsid: " + connectedSsid);
-            Log.i("ASDF", "4fb24a2: to ssid: " + ssid);
-            if (connectedSsid != null) {
-                connected = ssid.equals(connectedSsid);
+            Log.i("ASDF", "e8502d8: to ssid: " + ssid);
+            connected = isConnected(ssid);
+            if (connected) {
                 break;
             }
         }
 
         Log.i("ASDF", "connected: " + connected);
+
         return connected;
+    }
+
+    private boolean isConnected(String ssid) {
+        return ssid.equals(getSsid());
+    }
+
+    private String getSsid() {
+        final WifiInfo info = moWiFi.getConnectionInfo();
+        return unquote(info.getSSID());
     }
 
     public static String sudoForResult(String... strings) {
