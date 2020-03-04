@@ -871,9 +871,10 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     /// ref. https://developer.android.com/guide/topics/connectivity/wifi-bootstrap#java
     @TargetApi(Build.VERSION_CODES.Q)
     private void connectToV29(String ssid, Result result) {
+        Log.i("ASDF", "connectToV29 w/o password : ssid:" + ssid);
         final NetworkSpecifier specifier =
                 new WifiNetworkSpecifier.Builder()
-                        .setSsidPattern(new PatternMatcher(ssid, PatternMatcher.PATTERN_LITERAL))
+                        .setSsid(ssid)
                         .build();
 
         final NetworkRequest request =
@@ -905,9 +906,11 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
     @TargetApi(Build.VERSION_CODES.Q)
     private void connectToV29(String ssid, String password, Result result) {
+        Log.i("ASDF", "connectToV29 w/ password: ssid:" + ssid);
+        Log.i("ASDF", "connectToV29 w/ password: password:" + password);
         final NetworkSpecifier specifier =
                 new WifiNetworkSpecifier.Builder()
-                        .setSsidPattern(new PatternMatcher(ssid, PatternMatcher.PATTERN_LITERAL))
+                        .setSsid(ssid)
                         .setWpa2Passphrase(password)
                         .build();
 
