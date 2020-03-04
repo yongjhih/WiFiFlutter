@@ -574,7 +574,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             Log.d("ASDF", ssid);
             Log.d("ASDF", password);
             Log.d("ASDF", security);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && security == null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && (security == null || "NONE".equals(security))) {
                 connectToV29(ssid, password, poResult);
             } else {
                 final Handler handler = new Handler(Looper.getMainLooper());
