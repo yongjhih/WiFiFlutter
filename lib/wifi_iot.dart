@@ -195,10 +195,10 @@ class WiFiForIoTPlugin {
     bool bResult;
     try {
       bResult = await _channel.invokeMethod('connect', {
-        "ssid": ssid.toString(),
-        "password": password.toString(),
+        "ssid": ssid,
+        "password": password,
         "join_once": joinOnce,
-        "security": security?.toString()?.substring('$NetworkSecurity'.length + 1),
+        "security": security?.substring('$NetworkSecurity'.length + 1),
       });
     } on MissingPluginException catch (e) {
       print("MissingPluginException : ${e.toString()}");
@@ -220,8 +220,8 @@ class WiFiForIoTPlugin {
     bool bResult;
     try {
       bResult = await _channel.invokeMethod('findAndConnect', {
-      "ssid": ssid.toString(),
-      "password": password.toString(),
+      "ssid": ssid,
+      "password": password,
       "join_once": joinOnce,
       });
     } on MissingPluginException catch (e) {
