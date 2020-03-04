@@ -530,11 +530,10 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                         public void onAvailable(Network network) {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                                 manager.bindProcessToNetwork(network);
-                                manager.unregisterNetworkCallback(this);
                             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                 ConnectivityManager.setProcessDefaultNetwork(network);
-                                manager.unregisterNetworkCallback(this);
                             }
+                            manager.unregisterNetworkCallback(this);
                         }
                     });
                 }
@@ -574,7 +573,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             Log.d("ASDF", ssid);
             Log.d("ASDF", password);
             Log.d("ASDF", security);
-            if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 if ((password == null || "".equals(password)) || (security == null || "NONE".equals(security))) {
                     connectToV29(ssid, poResult);
                 } else {
@@ -679,7 +678,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                     Log.i("ASDF", "found: " + selectedResult.SSID);
                     Log.i("ASDF", "password: \"" + password + "\"");
 
-                    if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         if ((password == null || "".equals(password))) {
                             connectToV29(ssid, poResult);
                         } else {
@@ -890,6 +889,11 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(@NonNull Network network) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    connectivityManager.bindProcessToNetwork(network);
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    ConnectivityManager.setProcessDefaultNetwork(network);
+                }
                 result.success(true);
                 connectivityManager.unregisterNetworkCallback(this);
             }
@@ -927,6 +931,11 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(@NonNull Network network) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    connectivityManager.bindProcessToNetwork(network);
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    ConnectivityManager.setProcessDefaultNetwork(network);
+                }
                 result.success(true);
                 connectivityManager.unregisterNetworkCallback(this);
             }
@@ -1022,7 +1031,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             moWiFi.disconnect();
             final boolean enabled = moWiFi.enableNetwork(updateNetwork, true);
             Log.i("ASDF", "enabled: " + enabled);
-            //moWiFi.reconnect();
+            moWiFi.reconnect();
         }
 
         Log.i("ASDF", Thread.currentThread().getName());
