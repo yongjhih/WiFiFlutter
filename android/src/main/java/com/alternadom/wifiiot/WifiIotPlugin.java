@@ -574,8 +574,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             Log.d("ASDF", ssid);
             Log.d("ASDF", password);
             Log.d("ASDF", security);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && (security == null || "NONE".equals(security))) {
-                connectToV29(ssid, password, poResult);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if ((password == null || "".equals(password)) || (security == null || "NONE".equals(security))) {
+                    connectToV29(ssid, poResult);
+                } else {
+                    connectToV29(ssid, password, poResult);
+                }
             } else {
                 final Handler handler = new Handler(Looper.getMainLooper());
                 try {
@@ -657,8 +661,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
         */
 
-        new Thread() {
-            public void run() {
+        new Thread(() -> {
                 ScanResult selectedResult = getScanResult(ssid);
                 if (selectedResult == null) {
                     for (int i = 0; i < 30; i++) {
@@ -674,22 +677,21 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 final Handler handler = new Handler(Looper.getMainLooper());
                 if (selectedResult != null) {
                     Log.i("ASDF", "found: " + selectedResult.SSID);
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        if ((password == null || "".equals(password))) {
+                            connectToV29(ssid, poResult);
+                        } else {
+                            connectToV29(ssid, password, poResult);
+                        }
+                    } else {
                     try {
                         final boolean connected = connectTo(ssid, password, getSecurityType(selectedResult), joinOnce);
-                        handler.post(new Runnable() {
-                            @Override
-                            public void run () {
-                                poResult.success(connected);
-                            }
-                        });
+                        handler.post(() -> poResult.success(connected));
                     } catch (Throwable e) {
                         Log.e("ASDF", e.getMessage());
-                        handler.post(new Runnable() {
-                            @Override
-                            public void run () {
-                                poResult.error("Exception", e.getMessage(), null);
-                            }
-                        });
+                        handler.post(() -> poResult.error("Exception", e.getMessage(), null));
+                    }
                     }
                 } else {
                     handler.post(new Runnable() {
@@ -700,8 +702,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                         }
                     });
                 }
-            }
-        }.start();
+        }).start();
     }
 
     private ScanResult getScanResult(String ssid) {
@@ -866,12 +867,48 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     }
 
 
-    // https://developer.android.com/guide/topics/connectivity/wifi-bootstrap#java
+    /// ref. https://developer.android.com/guide/topics/connectivity/wifi-bootstrap#java
+    @TargetApi(Build.VERSION_CODES.Q)
+    private void connectToV29(String ssid, Result result) {
+        final NetworkSpecifier specifier =
+                new WifiNetworkSpecifier.Builder()
+                        .setSsidPattern(new PatternMatcher(ssid, PatternMatcher.PATTERN_LITERAL))
+                        .build();
+
+        final NetworkRequest request =
+                new NetworkRequest.Builder()
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                        .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .setNetworkSpecifier(specifier)
+                        .build();
+
+        final ConnectivityManager connectivityManager = (ConnectivityManager)
+                context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                result.success(true);
+                connectivityManager.unregisterNetworkCallback(this);
+            }
+
+            @Override
+            public void onUnavailable() {
+                result.error("onUnavailable", null, null);
+                connectivityManager.unregisterNetworkCallback(this);
+            }
+        };
+
+        connectivityManager.registerNetworkCallback(request, networkCallback);
+    }
+
     @TargetApi(Build.VERSION_CODES.Q)
     private void connectToV29(String ssid, String password, Result result) {
         final NetworkSpecifier specifier =
                 new WifiNetworkSpecifier.Builder()
-                        .setSsidPattern(new PatternMatcher(ssid, PatternMatcher.PATTERN_PREFIX))
+                        .setSsidPattern(new PatternMatcher(ssid, PatternMatcher.PATTERN_LITERAL))
+                        .setWpa2Passphrase(password)
+                        .setWpa3Passphrase(password)
                         .build();
 
         final NetworkRequest request =
