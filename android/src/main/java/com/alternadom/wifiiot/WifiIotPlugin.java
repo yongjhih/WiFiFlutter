@@ -570,9 +570,9 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             String security = poCall.argument("security");
             Boolean joinOnce = poCall.argument("join_once");
 
-            Log.d("ASDF", ssid);
-            Log.d("ASDF", password);
-            Log.d("ASDF", security);
+            Log.d("ASDF", "" + ssid);
+            Log.d("ASDF", "" + password);
+            Log.d("ASDF", "" + security);
             if (false && Build.VERSION.SDK_INT >= 29) {
                 //if ((password == null || "".equals(password)) || (security == null || "NONE".equals(security))) {
                 //    connectToV29(ssid, poResult);
