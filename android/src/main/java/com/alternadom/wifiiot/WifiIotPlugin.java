@@ -565,37 +565,28 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     }
 
     private void connect(final MethodCall poCall, final Result poResult) {
-        new Thread() {
-            public void run() {
-                String ssid = poCall.argument("ssid");
-                String password = poCall.argument("password");
-                String security = poCall.argument("security");
-                Boolean joinOnce = poCall.argument("join_once");
+        new Thread(() -> {
+            String ssid = poCall.argument("ssid");
+            String password = poCall.argument("password");
+            String security = poCall.argument("security");
+            Boolean joinOnce = poCall.argument("join_once");
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && security == null) {
-                    connectToV29(ssid, password, poResult);
-                } else {
+            Log.d("ASDF", ssid);
+            Log.d("ASDF", password);
+            Log.d("ASDF", security);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && security == null) {
+                connectToV29(ssid, password, poResult);
+            } else {
                 final Handler handler = new Handler(Looper.getMainLooper());
                 try {
                     final boolean connected = connectTo(ssid, password, security, joinOnce);
-                    handler.post(new Runnable() {
-                        @Override
-                        public void run () {
-                            poResult.success(connected);
-                        }
-                    });
+                    handler.post(() -> poResult.success(connected));
                 } catch (Throwable e) {
                     Log.e("ASDF", e.getMessage());
-                    handler.post(new Runnable() {
-                        @Override
-                        public void run () {
-                            poResult.error("Exception", e.getMessage(), null);
-                        }
-                    });
-                }
+                    handler.post(() -> poResult.error("Exception", e.getMessage(), null));
                 }
             }
-        }.start();
+        }).start();
     }
 
     public static final String CAPTIVE_PORTAL_DETECTION_ENABLED = "captive_portal_detection_enabled";
