@@ -574,7 +574,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             Log.d("ASDF", ssid);
             Log.d("ASDF", password);
             Log.d("ASDF", security);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 if ((password == null || "".equals(password)) || (security == null || "NONE".equals(security))) {
                     connectToV29(ssid, poResult);
                 } else {
@@ -679,7 +679,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                     Log.i("ASDF", "found: " + selectedResult.SSID);
                     Log.i("ASDF", "password: \"" + password + "\"");
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         if ((password == null || "".equals(password))) {
                             connectToV29(ssid, poResult);
                         } else {
