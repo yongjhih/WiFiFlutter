@@ -677,6 +677,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 final Handler handler = new Handler(Looper.getMainLooper());
                 if (selectedResult != null) {
                     Log.i("ASDF", "found: " + selectedResult.SSID);
+                    Log.i("ASDF", "password: \"" + password + "\"");
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         if ((password == null || "".equals(password))) {
@@ -907,7 +908,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         final NetworkSpecifier specifier =
                 new WifiNetworkSpecifier.Builder()
                         .setSsidPattern(new PatternMatcher(ssid, PatternMatcher.PATTERN_LITERAL))
-                        .setWpa2Passphrase(password)
                         .setWpa3Passphrase(password)
                         .build();
 
