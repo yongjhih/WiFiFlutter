@@ -908,7 +908,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         final NetworkSpecifier specifier =
                 new WifiNetworkSpecifier.Builder()
                         .setSsidPattern(new PatternMatcher(ssid, PatternMatcher.PATTERN_LITERAL))
-                        .setWpa3Passphrase(password)
+                        .setWpa2Passphrase(password)
                         .build();
 
         final NetworkRequest request =

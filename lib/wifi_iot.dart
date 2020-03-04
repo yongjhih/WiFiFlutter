@@ -194,12 +194,12 @@ class WiFiForIoTPlugin {
     if (!await isEnabled()) await setEnabled(true);
     bool bResult;
     try {
-      bResult = await _channel.invokeMethod('connect', {
+      bResult = await _channel.invokeMethod('connect', <String, Object>{
         "ssid": ssid,
         "password": password,
         "join_once": joinOnce,
-        "security": security?.substring('$NetworkSecurity'.length + 1),
-      });
+        "security": security?.toString()?.substring('$NetworkSecurity'.length + 1),
+      }..removeWhere((k, v) => v == null));
     } on MissingPluginException catch (e) {
       print("MissingPluginException : ${e.toString()}");
     }
@@ -219,11 +219,11 @@ class WiFiForIoTPlugin {
 //    }
     bool bResult;
     try {
-      bResult = await _channel.invokeMethod('findAndConnect', {
-      "ssid": ssid,
-      "password": password,
-      "join_once": joinOnce,
-      });
+      bResult = await _channel.invokeMethod('findAndConnect', <String, Object>{
+        "ssid": ssid,
+        "password": password,
+        "join_once": joinOnce,
+      }..removeWhere((k, v) => v == null));
     } on MissingPluginException catch (e) {
       print("MissingPluginException : ${e.toString()}");
     }
