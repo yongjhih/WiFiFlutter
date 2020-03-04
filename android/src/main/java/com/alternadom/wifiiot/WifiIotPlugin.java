@@ -954,7 +954,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         if (security != null) security = security.toUpperCase();
         else security = "NONE";
 
-        if (security.toUpperCase().equals("WPA")) {
+        if (security.equals("WPA")) {
 
             /// appropriate ciper is need to set according to security type used,
             /// ifcase of not added it will not be able to connect
@@ -1058,7 +1058,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     }
 
     private boolean isConnected(String ssid) {
-        return ssid.equals(getSsid());
+        return ssid != null ? ssid.equals(getSsid()) : false;
     }
 
     private String getSsid() {
