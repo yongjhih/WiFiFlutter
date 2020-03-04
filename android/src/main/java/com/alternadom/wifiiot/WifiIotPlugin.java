@@ -9,8 +9,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-//import android.net.NetworkSpecifier;
-//import android.net.wifi.WifiNetworkSpecifier;
+import android.net.NetworkSpecifier;
+import android.net.wifi.WifiNetworkSpecifier;
 import android.os.Handler;
 import android.os.Looper;
 import android.net.ConnectivityManager;
@@ -24,6 +24,7 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
+import android.os.PatternMatcher;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -573,12 +574,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             Log.d("ASDF", ssid);
             Log.d("ASDF", password);
             Log.d("ASDF", security);
-            if (false && Build.VERSION.SDK_INT >= 29) {
-                //if ((password == null || "".equals(password)) || (security == null || "NONE".equals(security))) {
-                //    connectToV29(ssid, poResult);
-                //} else {
-                //    connectToV29(ssid, password, poResult);
-                //}
+            if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if ((password == null || "".equals(password)) || (security == null || "NONE".equals(security))) {
+                    connectToV29(ssid, poResult);
+                } else {
+                    connectToV29(ssid, password, poResult);
+                }
             } else {
                 final Handler handler = new Handler(Looper.getMainLooper());
                 try {
@@ -678,14 +679,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                     Log.i("ASDF", "found: " + selectedResult.SSID);
                     Log.i("ASDF", "password: \"" + password + "\"");
 
-                    if (false && Build.VERSION.SDK_INT >= 29) {
-                        /*
+                    if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         if ((password == null || "".equals(password))) {
                             connectToV29(ssid, poResult);
                         } else {
                             connectToV29(ssid, password, poResult);
                         }
-                        */
                     } else {
                     try {
                         final boolean connected = connectTo(ssid, password, getSecurityType(selectedResult), joinOnce);
@@ -869,7 +868,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     }
 
 
-    /*
     /// ref. https://developer.android.com/guide/topics/connectivity/wifi-bootstrap#java
     @TargetApi(Build.VERSION_CODES.Q)
     private void connectToV29(String ssid, Result result) {
@@ -942,7 +940,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
         connectivityManager.registerNetworkCallback(request, networkCallback);
     }
-    */
 
     /// Method to connect to WIFI Network
     private Boolean connectTo(String ssid, String password, String security, Boolean joinOnce) {
