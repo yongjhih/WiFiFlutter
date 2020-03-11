@@ -28,6 +28,7 @@ import android.provider.Settings;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -438,7 +439,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         try {
             for (ScanResult result : results) {
                 JSONObject wifiObject = new JSONObject();
-                if (!result.SSID.equals("")) {
+                if (result.SSID != null && !result.SSID.equals("")) {
 
                     wifiObject.put("SSID", result.SSID);
                     wifiObject.put("BSSID", result.BSSID);
@@ -629,6 +630,11 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         final String password = poCall.argument("password");
         final Boolean joinOnce = poCall.argument("join_once");
 
+        if (ssid == null) {
+            poResult.error("Error", ssid + " is null", null);
+            return;
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
             // Requires system WRITE_SECURE_SETTINGS, DO NOT USE in user app
             //Settings.Global.putInt(context.getContentResolver(), CAPTIVE_PORTAL_MODE, CAPTIVE_PORTAL_MODE_PROMPT);
@@ -707,7 +713,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }).start();
     }
 
-    private ScanResult getScanResult(String ssid) {
+    private ScanResult getScanResult(@NonNull final String ssid) {
         List<ScanResult> results = moWiFi.getScanResults();
         ScanResult selectedResult = null;
 
@@ -814,7 +820,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     private void removeWifiNetwork(MethodCall poCall, Result poResult) {
         Log.i("ASDF", "removeWifiNetwork");
         String prefix_ssid = poCall.argument("ssid");
-        if (prefix_ssid.equals("")) {
+        if (prefix_ssid == null || prefix_ssid.equals("")) {
             poResult.error("Error", "No prefix SSID was given!", null);
         }
 
@@ -837,12 +843,16 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     private void isRegisteredWifiNetwork(MethodCall poCall, Result poResult) {
 
         String ssid = poCall.argument("ssid");
+        if (ssid == null) {
+            poResult.success(false);
+            return;
+        }
 
         List<WifiConfiguration> mWifiConfigList = moWiFi.getConfiguredNetworks();
         String comparableSSID = ('"' + ssid + '"'); //Add quotes because wifiConfig.SSID has them
         if (mWifiConfigList != null && !mWifiConfigList.isEmpty()) {
             for (WifiConfiguration wifiConfig : mWifiConfigList) {
-                if (wifiConfig.SSID.equals(comparableSSID)) {
+                if (wifiConfig.SSID != null && wifiConfig.SSID.equals(comparableSSID)) {
                     poResult.success(true);
                     return;
                 }
@@ -945,16 +955,23 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     */
 
     /// Method to connect to WIFI Network
-    private Boolean connectTo(String ssid, String password, String security, Boolean joinOnce) {
+    private Boolean connectTo(
+            @NonNull
+            final String ssid,
+            @Nullable
+            final String password,
+            @Nullable
+            final String security,
+            @Nullable
+            final Boolean joinOnce) {
         /// Make new configuration
         WifiConfiguration conf = new WifiConfiguration();
         conf.SSID = "\"" + ssid + "\"";
         conf.priority = 100;
 
-        if (security != null) security = security.toUpperCase();
-        else security = "NONE";
+        final String _security = (security != null) ? security.toUpperCase() : "NONE";
 
-        if (security.equals("WPA")) {
+        if (_security.equals("WPA")) {
 
             /// appropriate ciper is need to set according to security type used,
             /// ifcase of not added it will not be able to connect
@@ -976,7 +993,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
             conf.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
             conf.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
-        } else if (security.equals("WEP")) {
+        } else if (_security.equals("WEP")) {
             conf.wepKeys[0] = "\"" + password + "\"";
             conf.wepTxKeyIndex = 0;
             conf.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
@@ -1017,7 +1034,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
         Log.i("ASDF", "addedNetwork: " + updateNetwork);
 
-        if (joinOnce != null && joinOnce.booleanValue()) {
+        if (joinOnce != null && joinOnce) {
             ssidsToBeRemovedOnExit.add(conf.SSID);
         }
 
