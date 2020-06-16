@@ -713,19 +713,25 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }).start();
     }
 
+    @Nullable
     private ScanResult getScanResult(@NonNull final String ssid) {
-        List<ScanResult> results = moWiFi.getScanResults();
-        ScanResult selectedResult = null;
+        try {
+            List<ScanResult> results = moWiFi.getScanResults();
+            ScanResult selectedResult = null;
 
-        for (ScanResult result : results) {
-            String resultString = "" + result.SSID;
-            if (ssid.equals(resultString)) {
-                selectedResult = result;
-                break;
+            for (ScanResult result : results) {
+                String resultString = "" + result.SSID;
+                if (ssid.equals(resultString)) {
+                    selectedResult = result;
+                    break;
+                }
             }
-        }
 
-        return selectedResult;
+            return selectedResult;
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private static String getSecurityType(ScanResult scanResult) {
