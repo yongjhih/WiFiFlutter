@@ -11,6 +11,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 //import android.net.NetworkSpecifier;
 //import android.net.wifi.WifiNetworkSpecifier;
+import android.net.wifi.WifiNetworkSpecifier;
 import android.os.Handler;
 import android.os.Looper;
 import android.net.ConnectivityManager;
@@ -623,7 +624,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     @SuppressLint("PrivateApi")
     private void findAndConnect(final MethodCall poCall, final Result poResult) {
         int PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION = 65655434;
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             moActivity.requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION);
         }
         final String ssid = poCall.argument("ssid");
@@ -634,37 +635,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             poResult.error("Error", ssid + " is null", null);
             return;
         }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            // Requires system WRITE_SECURE_SETTINGS, DO NOT USE in user app
-            //Settings.Global.putInt(context.getContentResolver(), CAPTIVE_PORTAL_MODE, CAPTIVE_PORTAL_MODE_PROMPT);
-            //Settings.Global.putInt(context.getContentResolver(), CAPTIVE_PORTAL_DETECTION_ENABLED, 0);
-            // ref. https://gist.github.com/yongjhih/6d1cee717a000113abb68dd107d7786e
-        }
-        /*
-        final ConnectivityManager manager = (ConnectivityManager) context
-                .getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            final NetworkRequest.Builder builder = new NetworkRequest.Builder()
-                    /// set the transport type WIFI
-                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
-
-            if (manager != null) {
-                manager.registerNetworkCallback(builder.build(), new ConnectivityManager.NetworkCallback() {
-                    @Override
-                    public void onAvailable(Network network) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            manager.bindProcessToNetwork(network);
-                            manager.unregisterNetworkCallback(this);
-                        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            ConnectivityManager.setProcessDefaultNetwork(network);
-                            manager.unregisterNetworkCallback(this);
-                        }
-                    }
-                });
-            }
-        }
-        */
 
         new Thread(() -> {
                 ScanResult selectedResult = getScanResult(ssid);
@@ -684,22 +654,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                     Log.i("ASDF", "found: " + selectedResult.SSID);
                     Log.i("ASDF", "password: \"" + password + "\"");
 
-                    if (false && Build.VERSION.SDK_INT >= 29) {
-                        /*
-                        if ((password == null || "".equals(password))) {
-                            connectToV29(ssid, poResult);
-                        } else {
-                            connectToV29(ssid, password, poResult);
-                        }
-                        */
-                    } else {
                     try {
                         final boolean connected = connectTo(ssid, password, getSecurityType(selectedResult), joinOnce);
                         handler.post(() -> poResult.success(connected));
                     } catch (Throwable e) {
                         Log.e("ASDF", e.getMessage());
                         handler.post(() -> poResult.error("Exception", e.getMessage(), null));
-                    }
                     }
                 } else {
                     handler.post(new Runnable() {
@@ -970,6 +930,36 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             final String security,
             @Nullable
             final Boolean joinOnce) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            final WifiNetworkSpecifier.Builder specBuilder = new WifiNetworkSpecifier.Builder();
+            if (ssid != null || "".equals(ssid)) {
+                specBuilder.setSsid(ssid);
+            }
+            if (password != null || "".equals(password)) {
+                specBuilder.setWpa2Passphrase(password);
+            }
+
+            final ConnectivityManager manager = (ConnectivityManager)
+                    context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            ConnectivityManager.NetworkCallback networkCallback = new
+                    ConnectivityManager.NetworkCallback() {
+                        @Override
+                        public void onAvailable(final Network network) {
+                            super.onAvailable(network);
+                            Log.d("ASDF", "onAvailable: " + network);
+                            manager.bindProcessToNetwork(network);
+                            manager.unregisterNetworkCallback(this);
+                        }
+                    };
+            manager.requestNetwork(new NetworkRequest.Builder()
+                            .removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                            .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                            .setNetworkSpecifier(specBuilder.build())
+                            .build(),
+                    networkCallback);
+            return true;
+        } else {
         /// Make new configuration
         WifiConfiguration conf = new WifiConfiguration();
         conf.SSID = "\"" + ssid + "\"";
@@ -1067,8 +1057,9 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 break;
             }
             String connectedSsid = getSsid();
+            Log.i("ASDF", "connect to ssid: " + BuildConfig.VERSION_NAME);
             Log.i("ASDF", "connectedSsid: " + connectedSsid);
-            Log.i("ASDF", "e8502d8: to ssid: " + ssid);
+            Log.i("ASDF", "connect to ssid: " + ssid);
             connected = isConnected(ssid);
             if (connected) {
                 break;
@@ -1078,6 +1069,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         Log.i("ASDF", "connected: " + connected);
 
         return connected;
+        }
     }
 
     private boolean isConnected(String ssid) {
