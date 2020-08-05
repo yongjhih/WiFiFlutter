@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.net.wifi.WifiNetworkSpecifier;
 import android.os.Handler;
 import android.os.Looper;
 import android.net.ConnectivityManager;
@@ -19,6 +20,7 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
+import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -82,17 +84,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         registrar.addViewDestroyListener(new ViewDestroyListener() {
             @Override
             public boolean onViewDestroy(FlutterNativeView view) {
-                if (!wifiIotPlugin.ssidsToBeRemovedOnExit.isEmpty()) {
-                    List<WifiConfiguration> wifiConfigList =
-                            wifiIotPlugin.moWiFi.getConfiguredNetworks();
-                    for (String ssid : wifiIotPlugin.ssidsToBeRemovedOnExit) {
-                        for (WifiConfiguration wifiConfig : wifiConfigList) {
-                            if (wifiConfig.SSID.equals(ssid)) {
-                                wifiIotPlugin.moWiFi.removeNetwork(wifiConfig.networkId);
-                            }
-                        }
-                    }
-                }
                 return false;
             }
         });
@@ -672,21 +663,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
     /// This method will remove the WiFi network as per the passed SSID from the device list
     private void removeWifiNetwork(MethodCall poCall, Result poResult) {
-        String prefix_ssid = poCall.argument("ssid");
-        if (prefix_ssid.equals("")) {
-            poResult.error("Error", "No prefix SSID was given!", null);
-        }
-
-        List<WifiConfiguration> mWifiConfigList = moWiFi.getConfiguredNetworks();
-        for (WifiConfiguration wifiConfig : mWifiConfigList) {
-            String comparableSSID = ('"' + prefix_ssid); //Add quotes because wifiConfig.SSID has them
-            if (wifiConfig.SSID.startsWith(comparableSSID)) {
-                moWiFi.removeNetwork(wifiConfig.networkId);
-                moWiFi.saveConfiguration();
-                poResult.success(true);
-                return;
-            }
-        }
         poResult.success(false);
     }
 
@@ -726,7 +702,37 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     }
 
     /// Method to connect to WIFI Network
-    private Boolean connectTo(String ssid, String password, String security, Boolean joinOnce) {
+    private Boolean connectTo(final String ssid, final String password, String security, Boolean joinOnce) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            WifiNetworkSpecifier.Builder builder = new WifiNetworkSpecifier.Builder();
+            builder.setSsid(ssid);
+            if (password != null || "".equals(password)) {
+                builder.setWpa2Passphrase(password);
+            }
+
+            WifiNetworkSpecifier wifiNetworkSpecifier = builder.build();
+
+            NetworkRequest.Builder networkRequestBuilder1 = new NetworkRequest.Builder();
+            networkRequestBuilder1.removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+            networkRequestBuilder1.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
+            networkRequestBuilder1.setNetworkSpecifier(wifiNetworkSpecifier);
+
+            NetworkRequest nr = networkRequestBuilder1.build();
+            final ConnectivityManager cm = (ConnectivityManager)
+                    moContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+            ConnectivityManager.NetworkCallback networkCallback = new
+                    ConnectivityManager.NetworkCallback() {
+                        @Override
+                        public void onAvailable(final Network network) {
+                            super.onAvailable(network);
+                            Log.d("ASDF", "onAvailable:" + network);
+                            cm.bindProcessToNetwork(network);
+                            cm.unregisterNetworkCallback(this);
+                        }
+                    };
+            cm.requestNetwork(nr, networkCallback);
+            return true;
+        } else {
         /// Make new configuration
         WifiConfiguration conf = new WifiConfiguration();
         conf.SSID = "\"" + ssid + "\"";
@@ -816,6 +822,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
 
         return connected;
+            }
     }
 
     public static String sudoForResult(String... strings) {

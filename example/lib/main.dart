@@ -224,6 +224,15 @@ class _FlutterWifiIoTState extends State<FlutterWifiIoT> {
 
           htNetworks.add(
             ListTile(
+              onTap: () {
+                WiFiForIoTPlugin.connect(
+                  oNetwork.ssid,
+                  password: "",
+                  joinOnce: true,
+                  security: STA_DEFAULT_SECURITY,
+                );
+                print("connect: ${oNetwork.ssid}");
+              },
               title: Text("" +
                   oNetwork.ssid +
                   ((_htIsNetworkRegistered.containsKey(oNetwork.ssid) &&

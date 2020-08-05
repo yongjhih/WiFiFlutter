@@ -48,7 +48,7 @@ class WiFiForIoTPlugin {
     } on MissingPluginException catch (e) {
       print("MissingPluginException : ${e.toString()}");
     }
-    return bResult != null && bResult;
+    return bResult != null && bResult == true;
   }
 
   static setWiFiAPSSIDHidden(bool hidden) async {
