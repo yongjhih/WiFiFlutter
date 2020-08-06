@@ -882,12 +882,14 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                                 public void onUnavailable() {
                                     super.onUnavailable();
                                     callback.accept(false);
+                                    manager.unregisterNetworkCallback(this);
                                 }
 
                                 @Override
                                 public void onLost(@NonNull Network network) {
                                     super.onLost(network);
                                     callback.accept(false);
+                                    manager.unregisterNetworkCallback(this);
                                 }
                     });
         } else {
