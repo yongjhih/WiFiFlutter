@@ -630,18 +630,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
 
         new Thread(() -> {
-                ScanResult selectedResult = getScanResult(ssid);
-                if (selectedResult == null) {
-                    for (int i = 0; i < 30; i++) {
-                        try {
-                            Thread.sleep(4000);
-                        } catch (InterruptedException ignored) {
-                            break;
-                        }
-                        selectedResult = getScanResult(ssid);
-                        if (selectedResult != null) break;
-                    }
-                }
+                final ScanResult selectedResult = getScanResult(ssid);
                 final Handler handler = new Handler(Looper.getMainLooper());
                 if (selectedResult != null) {
                     Log.i("ASDF", "found: " + selectedResult.SSID);
@@ -849,7 +838,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             final Boolean joinOnce,
             Consumer<Boolean> callback
             ) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             final WifiNetworkSpecifier.Builder specBuilder = new WifiNetworkSpecifier.Builder();
             if (ssid != null || "".equals(ssid)) {
                 specBuilder.setSsid(ssid);
@@ -1000,7 +989,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         //if (!enabled) return false;
 
         boolean connected = false;
-        for (int i = 0; i < 30; i++) {
+        for (int i = 0; i < 3; i++) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException ignored) {
