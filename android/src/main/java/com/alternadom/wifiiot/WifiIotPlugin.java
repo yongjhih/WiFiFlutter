@@ -644,12 +644,9 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                         handler.post(() -> poResult.error("Exception", e.getMessage(), null));
                     }
                 } else {
-                    handler.post(new Runnable() {
-                        @Override
-                        public void run () {
-                            //poResult.success(false);
-                            poResult.error("Error", ssid + "not found", null);
-                        }
+                    handler.post(() -> {
+                        //poResult.success(false);
+                        poResult.error("Error", ssid + " not found", null);
                     });
                 }
         }).start();
@@ -838,7 +835,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             final Boolean joinOnce,
             Consumer<Boolean> callback
             ) {
-        if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             final WifiNetworkSpecifier.Builder specBuilder = new WifiNetworkSpecifier.Builder();
             if (ssid != null || "".equals(ssid)) {
                 specBuilder.setSsid(ssid);
