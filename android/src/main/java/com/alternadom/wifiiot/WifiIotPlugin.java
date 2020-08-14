@@ -45,6 +45,8 @@ import java.net.DatagramSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import info.whitebyte.hotspotmanager.ClientScanResult;
 import info.whitebyte.hotspotmanager.FinishScanListener;
@@ -567,7 +569,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     }
 
     private void connect(final MethodCall poCall, final Result poResult) {
-        new Thread(() -> {
+        mExecutor.execute(() -> {
             String ssid = poCall.argument("ssid");
             String password = poCall.argument("password");
             String security = poCall.argument("security");
@@ -578,13 +580,16 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             Log.d("ASDF", "" + security);
             final Handler handler = new Handler(Looper.getMainLooper());
             try {
+                //connectTo(ssid, password, security, joinOnce,
+                //        connected -> handler.post(() -> poResult.success(connected)));
                 connectTo(ssid, password, security, joinOnce,
-                        connected -> handler.post(() -> poResult.success(connected)));
+                        connected -> poResult.success(connected));
             } catch (Throwable e) {
                 Log.e("ASDF", e.getMessage());
-                handler.post(() -> poResult.error("Exception", e.getMessage(), null));
+                //handler.post(() -> poResult.error("Exception", e.getMessage(), null));
+                poResult.error("Exception", e.getMessage(), null);
             }
-        }).start();
+        });
     }
 
     public static final String CAPTIVE_PORTAL_DETECTION_ENABLED = "captive_portal_detection_enabled";
@@ -629,7 +634,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             return;
         }
 
-        new Thread(() -> {
+        mExecutor.execute(() -> {
                 final ScanResult selectedResult = getScanResult(ssid);
                 final Handler handler = new Handler(Looper.getMainLooper());
                 if (selectedResult != null) {
@@ -637,19 +642,23 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                     Log.i("ASDF", "password: \"" + password + "\"");
 
                     try {
+                        //connectTo(ssid, password, getSecurityType(selectedResult), joinOnce,
+                        //        connected -> handler.post(() -> poResult.success(connected)));
                         connectTo(ssid, password, getSecurityType(selectedResult), joinOnce,
-                                connected -> handler.post(() -> poResult.success(connected)));
+                                connected -> poResult.success(connected));
                     } catch (Throwable e) {
                         Log.e("ASDF", e.getMessage());
-                        handler.post(() -> poResult.error("Exception", e.getMessage(), null));
+                        //handler.post(() -> poResult.error("Exception", e.getMessage(), null));
+                        poResult.error("Exception", e.getMessage(), null);
                     }
                 } else {
-                    handler.post(() -> {
-                        //poResult.success(false);
-                        poResult.error("Error", ssid + " not found", null);
-                    });
+                    //handler.post(() -> {
+                    //    //poResult.success(false);
+                    //    poResult.error("Error", ssid + " not found", null);
+                    //});
+                    poResult.error("Error", ssid + " not found", null);
                 }
-        }).start();
+        });
     }
 
     @Nullable
@@ -835,12 +844,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             final Boolean joinOnce,
             Consumer<Boolean> callback
             ) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             final WifiNetworkSpecifier.Builder specBuilder = new WifiNetworkSpecifier.Builder();
-            if (ssid != null || "".equals(ssid)) {
+            if (ssid != null || !"".equals(ssid)) {
                 specBuilder.setSsid(ssid);
             }
-            if (password != null || "".equals(password)) {
+            if (password != null || !"".equals(password)) {
                 specBuilder.setWpa2Passphrase(password);
             }
 
@@ -849,8 +858,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
             manager.requestNetwork(
                     new NetworkRequest.Builder()
-                            .removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                            .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                            //.removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                            //.removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                             .setNetworkSpecifier(specBuilder.build())
                             .build(),
@@ -860,8 +869,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                                     super.onAvailable(network);
                                     Log.d("ASDF", "onAvailable: " + network);
                                     manager.bindProcessToNetwork(network);
-                                    manager.unregisterNetworkCallback(this);
                                     callback.accept(true);
+                                    manager.unregisterNetworkCallback(this);
                                 }
 
                                 @Override
@@ -874,14 +883,16 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                                 @Override
                                 public void onLost(@NonNull Network network) {
                                     super.onLost(network);
-                                    callback.accept(false);
-                                    manager.unregisterNetworkCallback(this);
+                                    //callback.accept(false);
+                                    //manager.unregisterNetworkCallback(this);
                                 }
                     });
         } else {
             callback.accept(connectTo(ssid, password, security, joinOnce));
         }
     }
+
+    Executor mExecutor = Executors.newSingleThreadExecutor();
 
     /**
      * Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
