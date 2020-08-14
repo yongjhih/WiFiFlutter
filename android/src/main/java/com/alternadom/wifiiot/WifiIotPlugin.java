@@ -1011,7 +1011,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     }
 
     private boolean isConnected(String ssid) {
-        return ssid != null ? ssid.equals(getSsid()) : false;
+        return ssid != null && ssid.equals(getSsid());
     }
 
     private String getSsid() {
