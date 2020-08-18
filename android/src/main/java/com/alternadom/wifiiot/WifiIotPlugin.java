@@ -569,7 +569,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     }
 
     private void connect(final MethodCall poCall, final Result poResult) {
-        mExecutor.execute(() -> {
+        new Thread(() -> {
             String ssid = poCall.argument("ssid");
             String password = poCall.argument("password");
             String security = poCall.argument("security");
@@ -635,7 +635,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             return;
         }
 
-        mExecutor.execute(() -> {
+        new Thread(() -> {
                 final ScanResult selectedResult = getScanResult(ssid);
                 final Handler handler = new Handler(Looper.getMainLooper());
                 if (selectedResult != null) {
@@ -890,7 +890,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
     }
 
-    private Executor mExecutor = Executors.newSingleThreadExecutor();
+    //private Executor mExecutor = Executors.newSingleThreadExecutor();
 
     /**
      * Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
