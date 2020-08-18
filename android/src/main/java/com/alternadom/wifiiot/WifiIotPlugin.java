@@ -231,7 +231,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
         /// cat /data/misc/wifi_hostapd/hostapd.accept
 
-        Log.e(this.getClass().toString(), "TODO : Develop function to enable/disable MAC filtering...");
+        Log.w(this.getClass().toString(), "TODO : Develop function to enable/disable MAC filtering...");
 
         poResult.error("TODO", "Develop function to enable/disable MAC filtering...", null);
     }
@@ -580,14 +580,15 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             Log.d("ASDF", "" + security);
             final Handler handler = new Handler(Looper.getMainLooper());
             try {
-                //connectTo(ssid, password, security, joinOnce,
-                //        connected -> handler.post(() -> poResult.success(connected)));
                 connectTo(ssid, password, security, joinOnce,
-                        connected -> poResult.success(connected));
+                        connected -> handler.post(() -> poResult.success(connected)));
             } catch (Throwable e) {
-                Log.e("ASDF", e.getMessage());
-                //handler.post(() -> poResult.error("Exception", e.getMessage(), null));
-                poResult.error("Exception", e.getMessage(), null);
+                if (e != null) {
+                    Log.w("ASDF", "e: " + e.getMessage());
+                    handler.post(() -> poResult.error("Exception", "e: " + e.getMessage(), null));
+                } else {
+                    handler.post(() -> poResult.error("Exception", "", null));
+                }
             }
         });
     }
@@ -639,24 +640,21 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 final Handler handler = new Handler(Looper.getMainLooper());
                 if (selectedResult != null) {
                     Log.i("ASDF", "found: " + selectedResult.SSID);
-                    Log.i("ASDF", "password: \"" + password + "\"");
+                    Log.i("ASDF", "password: " + password);
 
                     try {
-                        //connectTo(ssid, password, getSecurityType(selectedResult), joinOnce,
-                        //        connected -> handler.post(() -> poResult.success(connected)));
                         connectTo(ssid, password, getSecurityType(selectedResult), joinOnce,
-                                connected -> poResult.success(connected));
+                                connected -> handler.post(() -> poResult.success(connected)));
                     } catch (Throwable e) {
-                        Log.e("ASDF", e.getMessage());
-                        //handler.post(() -> poResult.error("Exception", e.getMessage(), null));
-                        poResult.error("Exception", e.getMessage(), null);
+                        if (e != null) {
+                            Log.w("ASDF", "e: " + e.getMessage());
+                            handler.post(() -> poResult.error("Exception", "e: " + e.getMessage(), null));
+                        } else {
+                            handler.post(() -> poResult.error("Exception", "e: ", null));
+                        }
                     }
                 } else {
-                    //handler.post(() -> {
-                    //    //poResult.success(false);
-                    //    poResult.error("Error", ssid + " not found", null);
-                    //});
-                    poResult.error("Error", ssid + " not found", null);
+                    handler.post(() -> poResult.error("Error", ssid + " not found", null));
                 }
         });
     }
@@ -846,10 +844,10 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             ) {
         if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             final WifiNetworkSpecifier.Builder specBuilder = new WifiNetworkSpecifier.Builder();
-            if (ssid != null || !"".equals(ssid)) {
+            if (ssid != null && !"".equals(ssid)) {
                 specBuilder.setSsid(ssid);
             }
-            if (password != null || !"".equals(password)) {
+            if (password != null && !"".equals(password)) {
                 specBuilder.setWpa2Passphrase(password);
             }
 
@@ -892,7 +890,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
     }
 
-    Executor mExecutor = Executors.newSingleThreadExecutor();
+    private Executor mExecutor = Executors.newSingleThreadExecutor();
 
     /**
      * Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
@@ -911,6 +909,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         WifiConfiguration conf = new WifiConfiguration();
         conf.SSID = "\"" + ssid + "\"";
         conf.priority = 100;
+        Log.i("ASDF", "0SSID: ");
+        Log.i("ASDF", "0SSID: " + conf.SSID);
 
         final String _security = (security != null) ? security.toUpperCase() : "NONE";
 
@@ -988,7 +988,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             //moWiFi.reconnect();
         }
 
-        Log.i("ASDF", Thread.currentThread().getName());
+        Log.i("ASDF", "" + Thread.currentThread().getName());
 
         //boolean enabled = moWiFi.enableNetwork(updateNetwork, true);
         //moWiFi.reconnect();
@@ -1086,7 +1086,9 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                             throw new RuntimeException("cannot close " + x);
                         }
                     } catch (Throwable e) {
-                        Log.e(Closer.class.toString(), e.getMessage());
+                        if (e != null) {
+                            Log.w(Closer.class.toString(), "" + e.getMessage());
+                        }
                     }
                 }
             }
