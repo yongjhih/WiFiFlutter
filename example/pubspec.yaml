@@ -1,5 +1,6 @@
 name: wifi_iot_example
 description: Demonstrates how to use the wifi_iot plugin.
+version: 1.0.0+2
 
 dependencies:
   flutter:

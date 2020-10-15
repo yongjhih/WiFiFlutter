@@ -56,6 +56,9 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 import io.flutter.plugin.common.PluginRegistry.ViewDestroyListener;
 import io.flutter.view.FlutterNativeView;
+import android.net.Uri;
+import android.provider.Settings;
+import android.util.Log;
 
 /**
  * WifiIotPlugin
