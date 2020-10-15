@@ -19,14 +19,11 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
-import android.net.Uri;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
-import android.provider.Settings;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -224,14 +221,12 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
      * @param poResult
      */
     private void setMACFiltering(MethodCall poCall, Result poResult) {
-//        String sResult = sudoForResult("iptables --list");
-//        Log.d(this.getClass().toString(), sResult);
         boolean bEnable = poCall.argument("state");
 
 
         /// cat /data/misc/wifi_hostapd/hostapd.accept
 
-        Log.w(this.getClass().toString(), "TODO : Develop function to enable/disable MAC filtering...");
+        // Log.e(this.getClass().toString(), "TODO : Develop function to enable/disable MAC filtering...");
 
         poResult.error("TODO", "Develop function to enable/disable MAC filtering...", null);
     }
@@ -246,8 +241,11 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
      */
     private void getWiFiAPSSID(Result poResult) {
         WifiConfiguration oWiFiConfig = moWiFiAPManager.getWifiApConfiguration();
-        String sAPSSID = oWiFiConfig.SSID;
-        poResult.success(sAPSSID);
+        if (oWiFiConfig != null && oWiFiConfig.SSID != null) {
+            poResult.success(oWiFiConfig.SSID);
+            return;
+        }
+        poResult.error("Exception", "SSID not found", null);
     }
 
     private void setWiFiAPSSID(MethodCall poCall, Result poResult) {
@@ -268,8 +266,11 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
      */
     private void isSSIDHidden(Result poResult) {
         WifiConfiguration oWiFiConfig = moWiFiAPManager.getWifiApConfiguration();
-        boolean isSSIDHidden = oWiFiConfig.hiddenSSID;
-        poResult.success(isSSIDHidden);
+        if (oWiFiConfig != null && oWiFiConfig.hiddenSSID) {
+            poResult.success(oWiFiConfig.hiddenSSID);
+            return;
+        }
+        poResult.error("Exception", "Wifi AP not Supported", null);
     }
 
     private void setSSIDHidden(MethodCall poCall, Result poResult) {
@@ -277,7 +278,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
         WifiConfiguration oWiFiConfig = moWiFiAPManager.getWifiApConfiguration();
 
-        Log.d(this.getClass().toString(), "isSSIDHidden : " + isSSIDHidden);
         oWiFiConfig.hiddenSSID = isSSIDHidden;
 
         moWiFiAPManager.setWifiApConfiguration(oWiFiConfig);
@@ -296,8 +296,11 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
      */
     private void getWiFiAPPreSharedKey(Result poResult) {
         WifiConfiguration oWiFiConfig = moWiFiAPManager.getWifiApConfiguration();
-        String sPreSharedKey = oWiFiConfig.preSharedKey;
-        poResult.success(sPreSharedKey);
+        if (oWiFiConfig != null && oWiFiConfig.preSharedKey != null) {
+            poResult.success(oWiFiConfig.preSharedKey);
+            return;
+        }
+        poResult.error("Exception", "Wifi AP not Supported", null);
     }
 
     private void setWiFiAPPreSharedKey(MethodCall poCall, Result poResult) {
@@ -439,7 +442,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         List<ScanResult> results = moWiFi.getScanResults();
         JSONArray wifiArray = new JSONArray();
 
-        Log.d("got wifiIotPlugin", "result number of SSID: "+ results.size());
         try {
             for (ScanResult result : results) {
                 JSONObject wifiObject = new JSONObject();
@@ -468,7 +470,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         } catch (JSONException e) {
             e.printStackTrace();
         } finally {
-            Log.d("got wifiIotPlugin", "final result: "+ results.toString());
             return wifiArray;
         }
     }
@@ -553,7 +554,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 ConnectivityManager.setProcessDefaultNetwork(null);
             }
         }
-        poResult.success(null);
     }
 
     /// Method to check if wifi is enabled
@@ -1074,7 +1074,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             for (Object x : xs) {
                 if (x != null) {
                     try {
-                        Log.d(Closer.class.toString(), "closing: " + x);
                         if (x instanceof Closeable) {
                             ((Closeable) x).close();
                         } else if (x instanceof Socket) {
@@ -1082,13 +1081,13 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                         } else if (x instanceof DatagramSocket) {
                             ((DatagramSocket) x).close();
                         } else {
-                            Log.d(Closer.class.toString(), "cannot close: " + x);
                             throw new RuntimeException("cannot close " + x);
                         }
                     } catch (Throwable e) {
                         if (e != null) {
                             Log.w(Closer.class.toString(), "" + e.getMessage());
                         }
+                        // TODO : do something ?
                     }
                 }
             }
