@@ -134,7 +134,7 @@ public class SwiftWifiIotPlugin: NSObject, FlutterPlugin {
             NEHotspotConfigurationManager.shared.apply(configuration) { (error) in
                 if (error != nil) {
                     if (error?.localizedDescription == "already associated.") {
-                        print("Connected to " + self.getSSID()!)
+                        print("Connected to " + (self.getSSID() ?? sSSID))
                         result(true)
                         return
                     } else {
