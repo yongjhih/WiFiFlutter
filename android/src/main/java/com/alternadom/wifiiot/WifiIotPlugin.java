@@ -557,6 +557,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 ConnectivityManager.setProcessDefaultNetwork(null);
             }
         }
+        poResult.success(null);
     }
 
     /// Method to check if wifi is enabled
@@ -572,7 +573,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     }
 
     private void connect(final MethodCall poCall, final Result poResult) {
-        new Thread(() -> {
+        mExecutor.execute(() -> {
             String ssid = poCall.argument("ssid");
             String password = poCall.argument("password");
             String security = poCall.argument("security");
@@ -638,7 +639,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             return;
         }
 
-        new Thread(() -> {
+        mExecutor.execute(() -> {
                 final ScanResult selectedResult = getScanResult(ssid);
                 final Handler handler = new Handler(Looper.getMainLooper());
                 if (selectedResult != null) {
@@ -893,7 +894,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
     }
 
-    //private Executor mExecutor = Executors.newSingleThreadExecutor();
+    private Executor mExecutor = Executors.newSingleThreadExecutor();
 
     /**
      * Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
