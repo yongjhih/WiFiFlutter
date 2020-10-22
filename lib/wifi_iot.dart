@@ -219,8 +219,13 @@ class WiFiForIoTPlugin {
 
   static Future<bool> findAndConnect(String ssid,
       {String password, bool joinOnce = true}) async {
-    if (!await isEnabled()) {
-      await setEnabled(true);
+    print("findAndConnect: $ssid $password");
+    try {
+        if (!await isEnabled()) {
+          await setEnabled(true);
+        }
+    } catch (err) {
+      print("MissingPluginException : ${err.toString()}");
     }
 //    Map<String, Object> htArguments = Map();
 //    htArguments["ssid"] = ssid;
@@ -236,6 +241,7 @@ class WiFiForIoTPlugin {
         "password": password,
         "join_once": joinOnce,
       }..removeWhere((k, v) => v == null));
+      print("findAndConnect: res: $bResult");
     } on MissingPluginException catch (e) {
       print("MissingPluginException : ${e.toString()}");
     }

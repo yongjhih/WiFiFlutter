@@ -562,14 +562,21 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
     /// Method to check if wifi is enabled
     private void isEnabled(Result poResult) {
+        Log.d("ASDF", "isEnabled");
         poResult.success(moWiFi.isWifiEnabled());
     }
 
     /// Method to connect/disconnect wifi service
     private void setEnabled(MethodCall poCall, Result poResult) {
-        Boolean enabled = poCall.argument("state");
-        moWiFi.setWifiEnabled(enabled);
-        poResult.success(null);
+        final Boolean enabled = poCall.argument("state");
+        Log.d("ASDF", "setEnabled");
+        try {
+            final Boolean res = moWiFi.setWifiEnabled(enabled);
+            poResult.success(res);
+        } catch (SecurityException e) {
+            Log.d("ASDF", "" + e);
+            poResult.error(e.toString(), e.getMessage(), e);
+        }
     }
 
     private void connect(final MethodCall poCall, final Result poResult) {
@@ -626,6 +633,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
     /// Callback returns true if ssid is in the range
     @SuppressLint("PrivateApi")
     private void findAndConnect(final MethodCall poCall, final Result poResult) {
+        Log.d("ASDF", "findAndConnect");
         int PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION = 65655434;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             moActivity.requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST_CODE_ACCESS_COARSE_LOCATION);
@@ -635,11 +643,13 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         final Boolean joinOnce = poCall.argument("join_once");
 
         if (ssid == null) {
-            poResult.error("Error", ssid + " is null", null);
+            Log.d("ASDF", "ssid is null");
+            poResult.error("Error", "ssid is null", null);
             return;
         }
 
         mExecutor.execute(() -> {
+            Log.d("ASDF", "getScanResult...");
                 final ScanResult selectedResult = getScanResult(ssid);
                 final Handler handler = new Handler(Looper.getMainLooper());
                 if (selectedResult != null) {
@@ -658,6 +668,7 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                         }
                     }
                 } else {
+                    Log.d("ASDF", "selectedResult is null");
                     handler.post(() -> poResult.error("Error", ssid + " not found", null));
                 }
         });
