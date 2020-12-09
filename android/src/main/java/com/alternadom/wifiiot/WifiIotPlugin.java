@@ -2,28 +2,28 @@ package com.alternadom.wifiiot;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-//import android.net.NetworkSpecifier;
-//import android.net.wifi.WifiNetworkSpecifier;
-import android.net.wifi.WifiNetworkSpecifier;
-import android.os.Handler;
-import android.os.Looper;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
+import android.net.Uri;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.net.wifi.WifiNetworkSpecifier;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -56,9 +56,9 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 import io.flutter.plugin.common.PluginRegistry.ViewDestroyListener;
 import io.flutter.view.FlutterNativeView;
-import android.net.Uri;
-import android.provider.Settings;
-import android.util.Log;
+
+//import android.net.NetworkSpecifier;
+//import android.net.wifi.WifiNetworkSpecifier;
 
 /**
  * WifiIotPlugin
@@ -857,49 +857,63 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             final Boolean joinOnce,
             Consumer<Boolean> callback
             ) {
-        if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             final WifiNetworkSpecifier.Builder specBuilder = new WifiNetworkSpecifier.Builder();
-            if (ssid != null && !"".equals(ssid)) {
+            if (!"".equals(ssid)) {
                 specBuilder.setSsid(ssid);
             }
             if (password != null && !"".equals(password)) {
                 specBuilder.setWpa2Passphrase(password);
             }
 
-            final ConnectivityManager manager = (ConnectivityManager)
+            final ConnectivityManager wifiManager = (ConnectivityManager)
                     context.getSystemService(Context.CONNECTIVITY_SERVICE);
 
-            manager.requestNetwork(
-                    new NetworkRequest.Builder()
-                            //.removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                            //.removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                            .setNetworkSpecifier(specBuilder.build())
-                            .build(),
-                    new ConnectivityManager.NetworkCallback() {
-                                @Override
-                                public void onAvailable(final Network network) {
-                                    super.onAvailable(network);
-                                    Log.d("ASDF", "onAvailable: " + network);
-                                    manager.bindProcessToNetwork(network);
-                                    callback.accept(true);
-                                    manager.unregisterNetworkCallback(this);
-                                }
+            if (wifiManager == null) {
+                callback.accept(false);
+            } else {
+                wifiManager.requestNetwork(
+                        new NetworkRequest.Builder()
+                                //.removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                                //.removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                                .setNetworkSpecifier(specBuilder.build())
+                                .build(),
+                        new ConnectivityManager.NetworkCallback() {
+                            @Override
+                            public void onAvailable(final Network network) {
+                                super.onAvailable(network);
+                                wifiManager.unregisterNetworkCallback(this);
+                                Log.d("ASDF", "onAvailable: " + network);
+                                wifiManager.bindProcessToNetwork(network);
+                                callback.accept(true);
+                            }
 
-                                @Override
-                                public void onUnavailable() {
-                                    super.onUnavailable();
-                                    callback.accept(false);
-                                    manager.unregisterNetworkCallback(this);
-                                }
+                            @Override
+                            public void onUnavailable() {
+                                super.onUnavailable();
+                                wifiManager.unregisterNetworkCallback(this);
+                                Log.d("ASDF", "onUnavailable");
+                                callback.accept(false);
+                            }
 
-                                @Override
-                                public void onLost(@NonNull Network network) {
-                                    super.onLost(network);
-                                    //callback.accept(false);
-                                    //manager.unregisterNetworkCallback(this);
-                                }
-                    });
+                            @Override
+                            public void onLost(@NonNull Network network) {
+                                super.onLost(network);
+                                Log.d("ASDF", "onLost");
+                                //callback.accept(false);
+                                //wifiManager.unregisterNetworkCallback(this);
+                            }
+                        });
+
+                /*
+                WifiNetworkSuggestion suggestion = new WifiNetworkSuggestion.Builder()
+                        .setSsid(ssid)
+                        .setWpa2Passphrase(password).build();
+
+                return wifiManager.addNetworkSuggestions(Collections.singletonList(suggestion));
+                */
+            }
         } else {
             callback.accept(connectTo(ssid, password, security, joinOnce));
         }
