@@ -889,19 +889,26 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 callback.accept(false);
             } else {
                 final NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
+                    Consumer<Boolean> _callback = callback;
                     @Override
                     public void onAvailable(final Network network) {
                         super.onAvailable(network);
                         Log.d("ASDF", "onAvailable: " + network);
                         connectivityManager.bindProcessToNetwork(network);
-                        callback.accept(true);
+                        if (_callback != null) {
+                            _callback.accept(true);
+                        }
+                        _callback = null;
                     }
 
                     @Override
                     public void onUnavailable() {
                         super.onUnavailable();
                         Log.d("ASDF", "onUnavailable");
-                        callback.accept(false);
+                        if (_callback != null) {
+                            callback.accept(false);
+                        }
+                        _callback = null;
                     }
 
                     @Override
