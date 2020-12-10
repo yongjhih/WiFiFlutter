@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
+import android.net.ConnectivityManager.NetworkCallback;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
@@ -22,11 +23,13 @@ import android.net.wifi.WifiNetworkSpecifier;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.RemoteException;
 import android.provider.Settings;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.core.util.Consumer;
 
 import org.json.JSONArray;
@@ -64,12 +67,21 @@ import io.flutter.view.FlutterNativeView;
  * WifiIotPlugin
  */
 public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHandler {
+    @Nullable
     private WifiManager moWiFi;
+    @NonNull
     private Context context;
+    @NonNull
     private WifiApManager moWiFiAPManager;
+    @Nullable
     private Activity moActivity;
+    @Nullable
     private BroadcastReceiver receiver;
+    @NonNull
     private List<String> ssidsToBeRemovedOnExit = new ArrayList<>();
+    @NonNull
+    private List<NetworkCallback> networkCallbacks = new ArrayList<>();
+    @NonNull
     private final Registrar registrar;
 
     private WifiIotPlugin(Registrar registrar) {
@@ -108,7 +120,10 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         });
     }
 
-    public static void removeOnceNetworks(WifiIotPlugin wifiIotPlugin) {
+    public static void removeOnceNetworks(@NonNull final WifiIotPlugin wifiIotPlugin) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            wifiIotPlugin.unregisterNetworkCallbacks();
+        }
         if (!wifiIotPlugin.ssidsToBeRemovedOnExit.isEmpty()) {
             List<WifiConfiguration> wifiConfigList =
                     wifiIotPlugin.moWiFi.getConfiguredNetworks();
@@ -124,6 +139,18 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 }
             }
         }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public void unregisterNetworkCallbacks() {
+        final ConnectivityManager connectivityManager = (ConnectivityManager) context
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager != null) {
+            for (NetworkCallback networkCallback : networkCallbacks) {
+                connectivityManager.unregisterNetworkCallback(networkCallback);
+            }
+        }
+        networkCallbacks.clear();
     }
 
     @Override
@@ -719,13 +746,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         Log.i("ASDF", "disconnect");
         moWiFi.disconnect();
         removeOnceNetworks(this);
-        List<WifiConfiguration> mWifiConfigList = moWiFi.getConfiguredNetworks();
-        Log.i("ASDF", "enableNetwork for all");
-        if (mWifiConfigList != null && !mWifiConfigList.isEmpty()) {
-            for (WifiConfiguration wifiConfig : mWifiConfigList) {
-                moWiFi.enableNetwork(wifiConfig.networkId, false);
-            }
-        }
         moWiFi.reconnect();
         poResult.success(null);
     }
@@ -862,49 +882,52 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 specBuilder.setWpa2Passphrase(password);
             }
 
-            final ConnectivityManager wifiManager = (ConnectivityManager)
+            final ConnectivityManager connectivityManager = (ConnectivityManager)
                     context.getSystemService(Context.CONNECTIVITY_SERVICE);
 
-            if (wifiManager == null) {
+            if (connectivityManager == null) {
                 callback.accept(false);
             } else {
-                wifiManager.requestNetwork(
+                final NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
+                    @Override
+                    public void onAvailable(final Network network) {
+                        super.onAvailable(network);
+                        Log.d("ASDF", "onAvailable: " + network);
+                        connectivityManager.bindProcessToNetwork(network);
+                        callback.accept(true);
+                    }
+
+                    @Override
+                    public void onUnavailable() {
+                        super.onUnavailable();
+                        Log.d("ASDF", "onUnavailable");
+                        callback.accept(false);
+                    }
+
+                    @Override
+                    public void onLost(@NonNull Network network) {
+                        super.onLost(network);
+                        Log.d("ASDF", "onLost");
+                        //callback.accept(false);
+                    }
+                };
+                networkCallbacks.add(networkCallback);
+                connectivityManager.requestNetwork(
                         new NetworkRequest.Builder()
                                 .removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
                                 .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                                 .setNetworkSpecifier(specBuilder.build())
                                 .build(),
-                        new ConnectivityManager.NetworkCallback() {
-                            @Override
-                            public void onAvailable(final Network network) {
-                                super.onAvailable(network);
-                                Log.d("ASDF", "onAvailable: " + network);
-                                wifiManager.bindProcessToNetwork(network);
-                                callback.accept(true);
-                            }
-
-                            @Override
-                            public void onUnavailable() {
-                                super.onUnavailable();
-                                Log.d("ASDF", "onUnavailable");
-                                callback.accept(false);
-                            }
-
-                            @Override
-                            public void onLost(@NonNull Network network) {
-                                super.onLost(network);
-                                Log.d("ASDF", "onLost");
-                                //callback.accept(false);
-                            }
-                        });
+                        networkCallback
+                        );
 
                 /*
                 WifiNetworkSuggestion suggestion = new WifiNetworkSuggestion.Builder()
                         .setSsid(ssid)
                         .setWpa2Passphrase(password).build();
 
-                return wifiManager.addNetworkSuggestions(Collections.singletonList(suggestion));
+                return connectivityManager.addNetworkSuggestions(Collections.singletonList(suggestion));
                 */
             }
         } else {
@@ -1011,12 +1034,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
         }
 
         Log.i("ASDF", "" + Thread.currentThread().getName());
-
-        //boolean enabled = moWiFi.enableNetwork(updateNetwork, true);
-        //moWiFi.reconnect();
-        //Log.i("ASDF", "enabled: " + enabled);
-        //enabled = moWiFi.enableNetwork(updateNetwork, true);
-        //if (!enabled) return false;
 
         boolean connected = false;
         for (int i = 0; i < 3; i++) {
