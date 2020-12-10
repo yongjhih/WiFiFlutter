@@ -538,10 +538,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                         public void onAvailable(Network network) {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                                 manager.bindProcessToNetwork(network);
-                                manager.unregisterNetworkCallback(this);
                             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                 ConnectivityManager.setProcessDefaultNetwork(network);
-                                manager.unregisterNetworkCallback(this);
                             }
                         }
                     });
@@ -660,12 +658,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                         connectTo(ssid, password, getSecurityType(selectedResult), joinOnce,
                                 connected -> handler.post(() -> poResult.success(connected)));
                     } catch (Throwable e) {
-                        if (e != null) {
-                            Log.w("ASDF", "e: " + e.getMessage());
-                            handler.post(() -> poResult.error("Exception", "e: " + e.getMessage(), null));
-                        } else {
-                            handler.post(() -> poResult.error("Exception", "e: ", null));
-                        }
+                        Log.w("ASDF", "e: " + e.getMessage());
+                        handler.post(() -> poResult.error("Exception", "e: " + e.getMessage(), null));
                     }
                 } else {
                     Log.d("ASDF", "selectedResult is null");
@@ -857,6 +851,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             final Boolean joinOnce,
             Consumer<Boolean> callback
             ) {
+        Log.d("ASDF", "Build.VERSION.SDK_INT: " + Build.VERSION.SDK_INT);
+        Log.d("ASDF", "Build.VERSION_CODES.Q: " + Build.VERSION_CODES.Q);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             final WifiNetworkSpecifier.Builder specBuilder = new WifiNetworkSpecifier.Builder();
             if (!"".equals(ssid)) {
@@ -874,8 +870,8 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             } else {
                 wifiManager.requestNetwork(
                         new NetworkRequest.Builder()
-                                //.removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                                //.removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                                .removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                                 .setNetworkSpecifier(specBuilder.build())
                                 .build(),
@@ -883,7 +879,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                             @Override
                             public void onAvailable(final Network network) {
                                 super.onAvailable(network);
-                                wifiManager.unregisterNetworkCallback(this);
                                 Log.d("ASDF", "onAvailable: " + network);
                                 wifiManager.bindProcessToNetwork(network);
                                 callback.accept(true);
@@ -892,7 +887,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                             @Override
                             public void onUnavailable() {
                                 super.onUnavailable();
-                                wifiManager.unregisterNetworkCallback(this);
                                 Log.d("ASDF", "onUnavailable");
                                 callback.accept(false);
                             }
@@ -902,7 +896,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                                 super.onLost(network);
                                 Log.d("ASDF", "onLost");
                                 //callback.accept(false);
-                                //wifiManager.unregisterNetworkCallback(this);
                             }
                         });
 
