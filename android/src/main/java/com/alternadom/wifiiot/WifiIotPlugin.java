@@ -921,8 +921,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 networkCallbacks.add(networkCallback);
                 connectivityManager.requestNetwork(
                         new NetworkRequest.Builder()
-                                .removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                                 .setNetworkSpecifier(specBuilder.build())
                                 .build(),
