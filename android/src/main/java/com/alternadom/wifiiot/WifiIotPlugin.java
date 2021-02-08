@@ -675,22 +675,32 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
 
         mExecutor.execute(() -> {
             Log.d("ASDF", "getScanResult...");
-                final ScanResult selectedResult = getScanResult(ssid);
-                final Handler handler = new Handler(Looper.getMainLooper());
-                if (selectedResult != null) {
-                    Log.i("ASDF", "found: " + selectedResult.SSID);
-                    Log.i("ASDF", "password: " + password);
+            final Handler handler = new Handler(Looper.getMainLooper());
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                    final ScanResult selectedResult = getScanResult(ssid);
+                    if (selectedResult != null) {
+                        Log.i("ASDF", "found: " + selectedResult.SSID);
+                        Log.i("ASDF", "password: " + password);
 
+                        try {
+                            connectTo(ssid, password, getSecurityType(selectedResult), joinOnce,
+                                    connected -> handler.post(() -> poResult.success(connected)));
+                        } catch (Throwable e) {
+                            Log.w("ASDF", "e: " + e.getMessage());
+                            handler.post(() -> poResult.error("Exception", "e: " + e.getMessage(), null));
+                        }
+                    } else {
+                        Log.d("ASDF", "selectedResult is null");
+                        handler.post(() -> poResult.error("Error", ssid + " not found", null));
+                    }
+                } else {
                     try {
-                        connectTo(ssid, password, getSecurityType(selectedResult), joinOnce,
+                        connectTo(ssid, password, null, joinOnce,
                                 connected -> handler.post(() -> poResult.success(connected)));
                     } catch (Throwable e) {
                         Log.w("ASDF", "e: " + e.getMessage());
                         handler.post(() -> poResult.error("Exception", "e: " + e.getMessage(), null));
                     }
-                } else {
-                    Log.d("ASDF", "selectedResult is null");
-                    handler.post(() -> poResult.error("Error", ssid + " not found", null));
                 }
         });
     }
