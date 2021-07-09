@@ -554,10 +554,10 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 final ConnectivityManager manager = (ConnectivityManager) context
                         .getSystemService(Context.CONNECTIVITY_SERVICE);
                 final NetworkRequest.Builder builder = new NetworkRequest.Builder()
-                /// set the transport type WIFI
-                .removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
+                        /// set the transport type WIFI
+                        .removeTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                        .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
 
                 if (manager != null) {
                     manager.registerNetworkCallback(builder.build(), new ConnectivityManager.NetworkCallback() {
@@ -677,31 +677,31 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
             Log.d("ASDF", "getScanResult...");
             final Handler handler = new Handler(Looper.getMainLooper());
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                    final ScanResult selectedResult = getScanResult(ssid);
-                    if (selectedResult != null) {
-                        Log.i("ASDF", "found: " + selectedResult.SSID);
-                        Log.i("ASDF", "password: " + password);
+                final ScanResult selectedResult = getScanResult(ssid);
+                if (selectedResult != null) {
+                    Log.i("ASDF", "found: " + selectedResult.SSID);
+                    Log.i("ASDF", "password: " + password);
 
-                        try {
-                            connectTo(ssid, password, getSecurityType(selectedResult), joinOnce,
-                                    connected -> handler.post(() -> poResult.success(connected)));
-                        } catch (Throwable e) {
-                            Log.w("ASDF", "e: " + e.getMessage());
-                            handler.post(() -> poResult.error("Exception", "e: " + e.getMessage(), null));
-                        }
-                    } else {
-                        Log.d("ASDF", "selectedResult is null");
-                        handler.post(() -> poResult.error("Error", ssid + " not found", null));
-                    }
-                } else {
                     try {
-                        connectTo(ssid, password, null, joinOnce,
+                        connectTo(ssid, password, getSecurityType(selectedResult), joinOnce,
                                 connected -> handler.post(() -> poResult.success(connected)));
                     } catch (Throwable e) {
                         Log.w("ASDF", "e: " + e.getMessage());
                         handler.post(() -> poResult.error("Exception", "e: " + e.getMessage(), null));
                     }
+                } else {
+                    Log.d("ASDF", "selectedResult is null");
+                    handler.post(() -> poResult.error("Error", ssid + " not found", null));
                 }
+            } else {
+                try {
+                    connectTo(ssid, password, null, joinOnce,
+                            connected -> handler.post(() -> poResult.success(connected)));
+                } catch (Throwable e) {
+                    Log.w("ASDF", "e: " + e.getMessage());
+                    handler.post(() -> poResult.error("Exception", "e: " + e.getMessage(), null));
+                }
+            }
         });
     }
 
@@ -1060,7 +1060,6 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 break;
             }
             String connectedSsid = getSsid();
-            Log.i("ASDF", "connect to ssid: " + BuildConfig.VERSION_NAME);
             Log.i("ASDF", "connectedSsid: " + connectedSsid);
             Log.i("ASDF", "connect to ssid: " + ssid);
             connected = isConnected(ssid);
