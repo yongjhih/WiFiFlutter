@@ -652,6 +652,16 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
      */
     public static final String CAPTIVE_PORTAL_MODE = "captive_portal_mode";
 
+    /*
+    private void openWifiSettingsSheet(final MethodCall poCall, final Result poResult) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startActivityForResult(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY), INTERNET_SETTINGS_REQUEST);
+        } else {
+            startActivity(Intent(Settings.ACTION_WIFI_SETTINGS));
+        }
+    }
+    */
+
     /// Send the ssid and password of a Wifi network into this to connect to the network.
     /// Example:  wifi.findAndConnect(ssid, password);
     /// After 10 seconds, a post telling you whether you are connected will pop up.
@@ -899,12 +909,17 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                 callback.accept(false);
             } else {
                 final NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
+                    // Restrict once callback
                     Consumer<Boolean> _callback = callback;
                     @Override
                     public void onAvailable(final Network network) {
                         super.onAvailable(network);
                         Log.d("ASDF", "onAvailable: " + network);
-                        connectivityManager.bindProcessToNetwork(network);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            connectivityManager.bindProcessToNetwork(network);
+                        } else {
+                            connectivityManager.setProcessDefaultNetwork(network);
+                        }
                         if (_callback != null) {
                             _callback.accept(true);
                         }
@@ -917,6 +932,11 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                         Log.d("ASDF", "onUnavailable");
                         if (_callback != null) {
                             callback.accept(false);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                connectivityManager.bindProcessToNetwork(null);
+                            } else {
+                                connectivityManager.setProcessDefaultNetwork(null);
+                            }
                         }
                         _callback = null;
                     }
@@ -925,7 +945,15 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                     public void onLost(@NonNull Network network) {
                         super.onLost(network);
                         Log.d("ASDF", "onLost");
-                        //callback.accept(false);
+                        if (_callback != null) {
+                            callback.accept(false);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                connectivityManager.bindProcessToNetwork(null);
+                            } else {
+                                connectivityManager.setProcessDefaultNetwork(null);
+                            }
+                        }
+                        _callback = null;
                     }
                 };
                 networkCallbacks.add(networkCallback);
@@ -937,22 +965,14 @@ public class WifiIotPlugin implements MethodCallHandler, EventChannel.StreamHand
                                 .setNetworkSpecifier(specBuilder.build())
                                 .build(),
                         networkCallback
-                        );
-
-                /*
-                WifiNetworkSuggestion suggestion = new WifiNetworkSuggestion.Builder()
-                        .setSsid(ssid)
-                        .setWpa2Passphrase(password).build();
-
-                return connectivityManager.addNetworkSuggestions(Collections.singletonList(suggestion));
-                */
+                );
             }
         } else {
             callback.accept(connectTo(ssid, password, security, joinOnce));
         }
     }
 
-    private Executor mExecutor = Executors.newSingleThreadExecutor();
+    private final Executor mExecutor = Executors.newSingleThreadExecutor();
 
     /**
      * Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
